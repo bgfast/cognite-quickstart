@@ -1,0 +1,13 @@
+workflowExternalId: wf_live_weather_data_{{ default_location }}
+version: '1'
+workflowDefinition:
+  tasks:
+  - externalId: tr_ts_temp_update_{{default_location}}_{{source_timeseries}}
+    type: transformation
+    parameters:
+      transformation:
+        externalId: tr_ts_temp_update_{{default_location}}_{{source_timeseries}}
+        concurrencyPolicy: fail
+    retries: 1
+    timeout: 3600
+    onFailure: abortWorkflow

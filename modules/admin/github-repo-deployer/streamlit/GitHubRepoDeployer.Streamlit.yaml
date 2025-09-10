@@ -1,0 +1,7 @@
+externalId: github-repo-deployer
+name: GitHub Repo to CDF Deployer
+creator: brent.groom@cognitedata.com
+description: Download files from public GitHub repositories and deploy them using the Cognite toolkit
+published: true
+theme: Light
+entrypoint: github-repo-deployer/main.py
