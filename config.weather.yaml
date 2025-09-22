@@ -16,12 +16,12 @@ environment:
   ### ===========================================
   ### DATA PROCESSING & SYNC MODULES
   ### ===========================================
-  #- modules/in-development/live_weather_data ### Live weather data hosted REST extractor
+  - modules/in-development/live_weather_data ### Live weather data hosted REST extractor
 
   ### ===========================================
   ### ADMINISTRATION & MANAGEMENT
   ### ===========================================
-  - modules/admin/github-repo-deployer       ### GitHub Repo to CDF Deployer
+  #- modules/admin/github-repo-deployer       ### GitHub Repo to CDF Deployer
 
 variables:
   # Environment Configuration
@@ -66,3 +66,4 @@ variables:
   client-id-pd: ${CLI_ID_PUBLICDATA}
   cli-secret-pd: ${CLI_SECRET_PUBLICDATA}
   base-url-pd: https://${CLUSTER_PUBLICDATA}.cognitedata.com
+
