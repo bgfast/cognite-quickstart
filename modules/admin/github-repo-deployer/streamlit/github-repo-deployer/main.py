@@ -80,13 +80,17 @@ def load_env_file(project_path=None):
     
     return True
 
-# Set page config first (must be before any other Streamlit commands)
-st.set_page_config(
-    page_title="GitHub Repo to CDF Deployer",
-    page_icon="🚀",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+def _set_page_config_once():
+    if not st.session_state.get("_page_config_done"):
+        st.set_page_config(
+            page_title="GitHub Repo to CDF Deployer",
+            page_icon="🚀",
+            layout="wide",
+            initial_sidebar_state="expanded",
+        )
+        st.session_state["_page_config_done"] = True
+
+_set_page_config_once()
 
 # Try to import streamlit components for advanced browser features
 try:
