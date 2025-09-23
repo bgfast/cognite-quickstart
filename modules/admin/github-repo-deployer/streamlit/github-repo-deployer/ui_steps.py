@@ -32,11 +32,33 @@ def render_step_1():
         st.warning("⚠️ No config.*.yaml files found in the repository.")
         return
 
+    # Store the extracted path and config files
     state.set_extracted_path(extracted_path)
     state.set_config_files(config_files)
     state.set_env_vars(env_vars)
-    state.set_workflow_step(2)
-    st.rerun()
+    
+    # Show config selection UI in Step 1
+    st.header("📋 Configuration Selection")
+    st.info(f"Found {len(config_files)} configuration files:")
+    
+    # Display config files with selection
+    selected_config = st.radio(
+        "Choose configuration to deploy:",
+        config_files,
+        format_func=lambda x: f"{os.path.basename(x)} (Environment: {x.replace('config.', '').replace('.yaml', '')})",
+    )
+    
+    if selected_config:
+        state.set_selected_config(selected_config)
+        state.set_selected_env(selected_config.replace('config.', '').replace('.yaml', ''))
+        st.success(f"✅ Selected: {os.path.basename(selected_config)}")
+        
+        # Show continue button to proceed to Build
+        if st.button("➡️ Continue to Build", type="primary"):
+            state.set_workflow_step(3)
+            st.rerun()
+    else:
+        st.info("Please select a configuration file to continue.")
 
 def render_step_2():
     st.subheader("📋 Step 2: Select Configuration")
@@ -78,33 +100,41 @@ def render_step_3():
     st.subheader("🔨 Step 3: Build Package")
     extracted_path = state.get_extracted_path()
     env_vars = state.get_env_vars() or {}
-    ok, out, err = toolkit_service.run_cognite_toolkit_build(extracted_path, env_vars)
-    if ok:
-        st.success("✅ Build completed successfully")
-        state.set_workflow_step(4)
-        st.rerun()
-    else:
-        st.error("❌ Build failed")
-        if err:
-            st.code(err, language="text")
+    
+    if st.button("🔨 Build Package", type="primary"):
+        with st.spinner("Building package..."):
+            ok, out, err = toolkit_service.run_cognite_toolkit_build(extracted_path, env_vars)
+            if ok:
+                st.success("✅ Build completed successfully")
+                state.set_workflow_step(4)
+                st.rerun()
+            else:
+                st.error("❌ Build failed")
+                if err:
+                    st.code(err, language="text")
 
 def render_step_4():
     st.subheader("🚀 Step 4: Deploy Package")
     extracted_path = state.get_extracted_path()
     env_vars = state.get_env_vars() or {}
-    ok, out, err = toolkit_service.run_cognite_toolkit_deploy(extracted_path, env_vars)
-    if ok:
-        st.success("✅ Deployment completed successfully")
-        state.set_workflow_step(5)
-        st.rerun()
-    else:
-        st.error("❌ Deployment failed")
-        if err:
-            st.code(err, language="text")
+    
+    if st.button("🚀 Deploy to CDF", type="primary"):
+        with st.spinner("Deploying to CDF..."):
+            ok, out, err = toolkit_service.run_cognite_toolkit_deploy(extracted_path, env_vars)
+            if ok:
+                st.success("✅ Deployment completed successfully")
+                state.set_workflow_step(5)
+                st.rerun()
+            else:
+                st.error("❌ Deployment failed")
+                if err:
+                    st.code(err, language="text")
 
 def render_step_5():
-    st.subheader("✅ Step 5: Verify Deployment")
-    st.success("🎉 Done")
+    st.subheader("✅ Step 5: Deployment Complete")
+    st.success("🎉 Deployment completed successfully!")
+    st.info("📦 Your package has been deployed to your CDF project.")
+    
     if st.button("🔄 Start New Deployment", type="primary"):
         state.reset()
         st.rerun()

@@ -15,37 +15,40 @@ This document baselines the expected behavior and structure of the Streamlit app
 ### 2) Steps
 1. Step 1: Download & Environment
    - Show Environment Configuration only in Step 1.
-   - Load `.env` (from uploaded file or repo path), show debug availability, but do not request manual inputs.
-   - Download repo (or accept ZIP upload), extract, set `st.session_state['extracted_path']`.
+   - Load environment variables (from uploaded file or repo path), show debug availability, but do not request manual inputs.
+   - **File Upload Requirements:**
+     - Accept ALL file types for environment file uploads (no file type restrictions)
+     - Support .env, .txt, .config, or any text file containing environment variables
+     - Parse files with KEY=VALUE format regardless of file extension
+   - accept a repo url - use this as default: https://github.com/bgfast/cognite-quickstart
+   - Use gh api to download all files in the repo. The zip download does not work because of cors issues. 
+   - future requirement - connect to a private repo 
+   - future requirement - download a zip from the current cdf project
+   - Download repo 
+   - extract, set `st.session_state['extracted_path']`.
    - Discover `config.*.yaml` and store list in `st.session_state['config_files']`.
-   - When complete, auto-advance to Step 2.
+   - provide a download button
+   - show logging information from download
+   - When complete, enable Step 2.
 
 2. Step 2: Select Configuration
-   - Render tabs, one per `config.*.yaml` file; show associated README if present.
+   - Render sub-tabs, one per `config.*.yaml` file; show associated README if present.
    - Selecting a config sets `st.session_state['selected_config']` and `st.session_state['selected_env']`.
-   - Continue button advances to Step 3. Back button returns to Step 1.
+   - step 3 is always enabled because no action is required on step 2. one is selected by default. the user can change it if they want but are not required to
 
-3. Step 3: Build
-   - Build with Toolkit-first approach (`cdf build --env all`) or compatible fallback.
-   - Show build log/output within this step only.
-   - On success, advance to Step 4.
-
-4. Step 4: Deploy
-   - Deploy with `cdf deploy --env all` (Toolkit-first) or fallback.
-   - Show deploy summary within this step only.
+3. Step 3: Build and Deploy
+   - show the name of the selected config
+   - use the toolkit libraries to build and deploy.
+   - Show build detailed log/output within this step only.
+   - Show deploy detailed logs within this step only.
    - On success, advance to Step 5.
 
-5. Step 5: Verify
+future 4. Step 4: Verify
+   - Run each of the verify tests from each module.
    - Summarize results (selected config, env, versions, success status).
    - Offer "Start New Deployment" to reset state and return to Step 1.
 
 ### 3) Architecture & Refactor Plan
-- Extract per-step renderers:
-  - `render_step_1()` – environment, download, extract, discovery
-  - `render_step_2()` – config selection + README tabs
-  - `render_step_3()` – build
-  - `render_step_4()` – deploy
-  - `render_step_5()` – verify
 - `main()` should:
   1) Render step-tabs header (clickable) 
   2) `if step == n: render_step_n()` exclusively
@@ -54,11 +57,15 @@ This document baselines the expected behavior and structure of the Streamlit app
 ### 4) Non-Functional
 - Minimize UI flicker: prefer containers and forms; only rerun on step change or long op completion.
 - Persist critical state in `st.session_state`; avoid recomputation when navigating back to earlier steps.
-- Keep verbose debug only when `debug_mode` is true.
+- use verbose debug=true during development
 
 ### 5) Acceptance Criteria
 - Switching steps shows no content leakage from other steps.
-- Uploading `.env` and downloading/extracting repo occur only in Step 1.
+- Uploading environment files (any file type) and downloading/extracting repo occur only in Step 1.
+- **File Upload Acceptance:**
+  - File uploader accepts ALL file types without restrictions
+  - Environment files with any extension (.env, .txt, .config, etc.) are accepted
+  - Files are parsed correctly regardless of file extension
 - Config selection UI is visible only in Step 2.
 - Build logs are confined to Step 3; deploy summary to Step 4; verification to Step 5.
 - Tabs at the top reliably navigate between completed steps.

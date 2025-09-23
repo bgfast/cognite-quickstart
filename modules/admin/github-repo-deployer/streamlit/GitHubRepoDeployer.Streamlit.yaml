@@ -1,7 +1,7 @@
 externalId: github-repo-deployer
 name: GitHub Repo to CDF Deployer
 creator: brent.groom@cognitedata.com
-description: v1.56 - Download files from public GitHub repositories and deploy them using the Cognite toolkit (Absolute imports, page_config guard, modular split)
+description: v1.68 - Download files from public GitHub repositories and deploy them using the Cognite toolkit (Restored step-based workflow with config selection)
 published: true
 theme: Light
 entrypoint: main.py
