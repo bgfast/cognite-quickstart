@@ -1,4 +1,4 @@
-from . import main as legacy
+import main as legacy
 
 def run_cognite_toolkit_build(project_path, env_vars=None):
     return legacy.run_cognite_toolkit_build(project_path, env_vars)

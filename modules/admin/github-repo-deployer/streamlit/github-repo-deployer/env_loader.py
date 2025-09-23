@@ -1,5 +1,5 @@
 import streamlit as st
-from . import state
+import state
 
 def render_env_ui():
     env_option = st.radio(

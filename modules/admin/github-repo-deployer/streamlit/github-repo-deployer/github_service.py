@@ -1,6 +1,6 @@
 import os
 import streamlit as st
-from . import state
+import state
 
 # Thin wrappers that call existing functions left in main.py via st.session_state bridges if needed.
 
@@ -20,11 +20,11 @@ def render_download_section(repo_owner, repo_name, selected_branch, access_type)
     return st.session_state.get('uploaded_zip_path')
 
 def extract_zip_to_temp_dir(path):
-    from . import main as legacy
+    import main as legacy
     return legacy.extract_zip_to_temp_dir(path)
 
 def find_config_files(root):
-    from . import main as legacy
+    import main as legacy
     return legacy.find_config_files(root)
 
 

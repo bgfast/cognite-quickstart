@@ -2,7 +2,11 @@ import os
 import tempfile
 import streamlit as st
 
-from . import env_loader, github_service, readme_finder, toolkit_service, state
+import env_loader
+import github_service
+import readme_finder
+import toolkit_service
+import state
 
 def render_step_1():
     st.header("⚙️ Environment Configuration")

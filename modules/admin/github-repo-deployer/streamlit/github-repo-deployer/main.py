@@ -10,7 +10,8 @@ import urllib.parse
 import re
 from pathlib import Path
 from cognite.client import CogniteClient
-from . import ui_steps, state
+import ui_steps
+import state
 import time
 from dotenv import load_dotenv
 
@@ -1940,20 +1941,20 @@ def main():
                 st.error("Please provide both repository owner and name")
             else:
                 with st.spinner("Loading branches..."):
-                # For public repos, don't use token; for private repos, use token if available
-                token = None
-                if "Private Repository" in access_type:
-                    token = st.session_state.get('github_token')
-                    if not token:
-                        st.error("Authentication required for private repositories. Please login with GitHub first.")
-                        return
-                
-                branches = get_github_branches(repo_owner, repo_name, token)
-                if branches:
-                    st.session_state['available_branches'] = branches
-                    st.success(f"Found {len(branches)} branches")
-                else:
-                    st.error("Failed to load branches")
+                    # For public repos, don't use token; for private repos, use token if available
+                    token = None
+                    if "Private Repository" in access_type:
+                        token = st.session_state.get('github_token')
+                        if not token:
+                            st.error("Authentication required for private repositories. Please login with GitHub first.")
+                            return
+                    
+                    branches = get_github_branches(repo_owner, repo_name, token)
+                    if branches:
+                        st.session_state['available_branches'] = branches
+                        st.success(f"Found {len(branches)} branches")
+                    else:
+                        st.error("Failed to load branches")
     
         # Show branch selector if branches are loaded
         if 'available_branches' in st.session_state:
@@ -1976,7 +1977,7 @@ def main():
         # CDF Proxy Management (if CDF client is available)
         if CLIENT:
             with st.expander("🗄️ CDF Proxy Management (Advanced)"):
-            st.info("**CDF Proxy**: Store repositories in CDF for faster, CORS-free downloads")
+                st.info("**CDF Proxy**: Store repositories in CDF for faster, CORS-free downloads")
             
             col1, col2 = st.columns(2)
             
