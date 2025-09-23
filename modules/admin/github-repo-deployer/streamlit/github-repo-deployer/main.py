@@ -10,6 +10,7 @@ import urllib.parse
 import re
 from pathlib import Path
 from cognite.client import CogniteClient
+from . import ui_steps, state
 import time
 from dotenv import load_dotenv
 
@@ -2157,107 +2158,21 @@ def main():
         # End of Step 1 content
         return
         
-        # Step 2: Select Configuration
+    # Step 2: Select Configuration
         if st.session_state['workflow_step'] == 2:
-            st.subheader("📋 Step 2: Select Configuration")
-            
-            # Load discovered files from session or re-discover
-            extracted_path = st.session_state.get('extracted_path')
-            config_files = st.session_state.get('config_files') or (find_config_files(extracted_path) if extracted_path else [])
-            
-            if not config_files:
-                st.error("❌ No config files found in the repository")
-                return
-            
-            # Create tabs for each config file
-            tab_names = []
-            for config_file in config_files:
-                env_name = config_file.replace('config.', '').replace('.yaml', '')
-                tab_names.append(f"{config_file} ({env_name})")
-            
-            # Create tabs
-            tabs = st.tabs(tab_names)
-            
-            # Create content for each tab
-            for i, config_file in enumerate(config_files):
-                env_name = config_file.replace('config.', '').replace('.yaml', '')
-                
-                with tabs[i]:
-                    st.subheader(f"📋 {config_file}")
-                    st.info(f"🎯 **Environment:** {env_name}")
-                    
-                    # Show README content for this config
-                    readme_path = find_readme_for_config(extracted_path, config_file)
-                    if readme_path:
-                        st.subheader(f"📖 README for {config_file}")
-                        st.info(f"✅ **Found README at:** {readme_path}")
-                        readme_content = read_readme_content(readme_path)
-                        with st.expander("View README content", expanded=True):
-                            st.markdown(readme_content)
-                    else:
-                        st.info(f"ℹ️ No README file found for {config_file}")
-                        st.info("💡 **Tip:** Add a README.{env_name}.md file to provide detailed information about this configuration.")
-            
-            # Radio button for config selection
-            selected_config = st.radio(
-                "Choose configuration to deploy:",
-                config_files,
-                help="Select which config file to use for deployment",
-                format_func=lambda x: f"{x} (Environment: {x.replace('config.', '').replace('.yaml', '')})"
-            )
-            
-            col1, col2 = st.columns([1, 1])
-            with col1:
-                if st.button("⬅️ Back to Download", help="Go back to download step"):
-                    st.session_state['workflow_step'] = 1
-                    st.rerun()
-            with col2:
-                if st.button("➡️ Continue to Build", type="primary"):
-                    st.session_state['selected_config'] = selected_config
-                    st.session_state['selected_env'] = selected_config.replace('config.', '').replace('.yaml', '')
-                    st.session_state['workflow_step'] = 3
-                    st.rerun()
+            ui_steps.render_step_2()
         
         # Step 3: Build Package
         if st.session_state['workflow_step'] == 3:
-            st.subheader("🔨 Step 3: Build Package")
-            selected_config = st.session_state.get('selected_config')
-            selected_env = st.session_state.get('selected_env')
-            
-            st.info(f"✅ **Selected config:** {selected_config}")
-            st.info(f"🎯 **Environment:** {selected_env}")
-            
-            if st.button("🔨 Start Build", type="primary"):
-                st.session_state['workflow_step'] = 4
-                st.rerun()
+            ui_steps.render_step_3()
         
         # Step 4: Deploy Package
         if st.session_state['workflow_step'] == 4:
-            st.subheader("🚀 Step 4: Deploy Package")
-            selected_config = st.session_state.get('selected_config')
-            selected_env = st.session_state.get('selected_env')
-            
-            st.info(f"📋 **Config:** {selected_config}")
-            st.info(f"🎯 **Environment:** {selected_env}")
-            
-            if st.button("🚀 Start Deployment", type="primary"):
-                st.session_state['workflow_step'] = 5
-                st.rerun()
+            ui_steps.render_step_4()
         
         # Step 5: Verify Deployment
         if st.session_state['workflow_step'] == 5:
-            st.subheader("✅ Step 5: Verify Deployment")
-            st.success("🎉 **Deployment completed successfully!**")
-            st.info("📊 **Deployment Summary:**")
-            st.info(f"   • **Config:** {st.session_state.get('selected_config')}")
-            st.info(f"   • **Environment:** {st.session_state.get('selected_env')}")
-            st.info("   • **Status:** ✅ Success")
-            
-            if st.button("🔄 Start New Deployment", type="primary"):
-                st.session_state['workflow_step'] = 1
-                st.session_state['selected_config'] = None
-                st.session_state['selected_env'] = None
-                st.rerun()
+            ui_steps.render_step_5()
         
         # Only proceed to build if we're past step 2
         if st.session_state['workflow_step'] < 3:
