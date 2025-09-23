@@ -237,6 +237,41 @@ def get_saas_project_info():
         'url': saas_url
     }
 
+def find_readme_for_config(project_path, config_file):
+    """Find the README file associated with a config file"""
+    # Extract environment name from config file
+    env_name = config_file.replace('config.', '').replace('.yaml', '')
+    
+    # Look for README files with matching environment name
+    readme_patterns = [
+        f"README.{env_name}.md",
+        f"readme.{env_name}.md", 
+        f"README.{env_name}.MD",
+        f"readme.{env_name}.MD"
+    ]
+    
+    # First check the root directory
+    for pattern in readme_patterns:
+        readme_path = os.path.join(project_path, pattern)
+        if os.path.exists(readme_path):
+            return readme_path
+    
+    # Then search recursively
+    for root, dirs, files in os.walk(project_path):
+        for file in files:
+            if file in readme_patterns:
+                return os.path.join(root, file)
+    
+    return None
+
+def read_readme_content(readme_path):
+    """Read and return the content of a README file"""
+    try:
+        with open(readme_path, 'r', encoding='utf-8') as f:
+            return f.read()
+    except Exception as e:
+        return f"Error reading README: {e}"
+
 def update_existing_config_file(project_path, env_vars):
     """Update existing config.all.yaml with actual values from environment variables"""
     config_all_path = os.path.join(project_path, 'config.all.yaml')
@@ -1278,9 +1313,13 @@ def run_cognite_toolkit_deploy_same_saas(project_path, config_file, env_name):
             build_modules_dir = os.path.join(build_dir, "modules")
             shutil.copytree(modules_dir, build_modules_dir)
         
-        # Copy config file to build directory
-        build_config_path = os.path.join(build_dir, config_file)
+        # Copy the selected config file to build directory as config.all.yaml
+        # This ensures the deployment uses the selected config
+        build_config_path = os.path.join(build_dir, "config.all.yaml")
         shutil.copy2(config_path, build_config_path)
+        
+        st.info(f"📋 **Using config file:** {config_file}")
+        st.info(f"🎯 **Environment:** {env_name}")
         
         # Create build metadata (same as toolkit)
         build_info = {
@@ -1579,6 +1618,43 @@ def main():
     st.title("🚀 GitHub Repo to CDF Deployer")
     st.markdown("Download files from GitHub repositories (public or private) and deploy them using the Cognite toolkit")
     
+    # Initialize workflow step
+    if 'workflow_step' not in st.session_state:
+        st.session_state['workflow_step'] = 1
+    
+    # Workflow Steps - ALWAYS AT THE TOP
+    st.subheader("🚀 GitHub Repository Deployment Workflow")
+    
+    # Step indicators as clickable tabs
+    steps = [
+        ("📥 Download Repository", "Download and extract repository files"),
+        ("📋 Select Configuration", "Choose deployment configuration"),
+        ("🔨 Build Package", "Build the deployment package"),
+        ("🚀 Deploy Package", "Deploy to CDF"),
+        ("✅ Verify Deployment", "Confirm successful deployment")
+    ]
+    
+    # Create clickable step indicators
+    cols = st.columns(len(steps))
+    for i, (step_name, step_desc) in enumerate(steps):
+        with cols[i]:
+            step_num = i + 1
+            if step_num == st.session_state['workflow_step']:
+                # Current step - highlighted
+                if st.button(f"**Step {step_num}:** {step_name}", key=f"step_{step_num}_current", type="primary"):
+                    st.session_state['workflow_step'] = step_num
+                    st.rerun()
+            elif step_num < st.session_state['workflow_step']:
+                # Completed step - clickable
+                if st.button(f"**Step {step_num}:** {step_name}", key=f"step_{step_num}_completed", help=f"Go back to {step_name}"):
+                    st.session_state['workflow_step'] = step_num
+                    st.rerun()
+            else:
+                # Future step - disabled
+                st.button(f"**Step {step_num}:** {step_name}", key=f"step_{step_num}_future", disabled=True, help=f"Complete previous steps first")
+    
+    st.divider()
+    
     # Handle OAuth callback
     handle_oauth_callback()
     
@@ -1621,104 +1697,106 @@ def main():
                 st.warning("⚠️ GitHub OAuth not configured")
                 st.write("Set GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET environment variables")
     
-    # Environment Configuration
-    st.header("⚙️ Environment Configuration")
-    
-    # Environment file management options
-    env_option = st.radio(
-        "Choose how to handle environment variables:",
-        ["📁 Upload .env file", "🔄 Generate from current CDF connection", "⏭️ Skip (use existing environment)"],
-        help="Select how you want to provide environment variables for the deployment"
-    )
-    
-    env_vars = {}
-    
-    if env_option == "📁 Upload .env file":
-        st.info("📁 **Upload .env File** - Upload your own environment file")
+    # Step 1 content only
+    if st.session_state['workflow_step'] == 1:
+        # Environment Configuration
+        st.header("⚙️ Environment Configuration")
         
-        uploaded_file = st.file_uploader(
-            "Choose environment file",
-            type=None,
-            help="Upload any environment file containing your CDF project configuration (accepts all file types)"
+        # Environment file management options
+        env_option = st.radio(
+            "Choose how to handle environment variables:",
+            ["📁 Upload .env file", "🔄 Generate from current CDF connection", "⏭️ Skip (use existing environment)"],
+            help="Select how you want to provide environment variables for the deployment"
         )
         
-        if uploaded_file is not None:
-            try:
-                # Read the uploaded file
-                content = uploaded_file.read().decode('utf-8')
-                env_vars = parse_env_file_content(content)
-                
-                # Validate environment variables
-                missing_vars = validate_env_vars(env_vars)
-                if missing_vars:
-                    st.error(f"❌ Missing required environment variables: {', '.join(missing_vars)}")
-                else:
-                    st.success("✅ Environment file loaded successfully!")
-                    
-                    # Show preview of environment variables (hide sensitive values)
-                    with st.expander("🔍 Preview Environment Variables"):
-                        for key, value in env_vars.items():
-                            if 'secret' in key.lower() or 'password' in key.lower() or 'token' in key.lower():
-                                display_value = "***" + value[-4:] if len(value) > 4 else "***"
-                            else:
-                                display_value = value
-                            st.text(f"{key}={display_value}")
-                
-                # Store in session state for later use
-                st.session_state['env_vars'] = env_vars
-                
-            except Exception as e:
-                st.error(f"❌ Error reading .env file: {e}")
-    
-    elif env_option == "🔄 Generate from current CDF connection":
-        st.info("🔄 **Generate from CDF** - Create .env file from your current CDF connection")
+        env_vars = {}
         
-        if CLIENT:
-            st.success("✅ Connected to CDF! Generating environment file...")
+        if env_option == "📁 Upload .env file":
+            st.info("📁 **Upload .env File** - Upload your own environment file")
             
-            env_content = generate_env_file_from_cdf()
-            if env_content:
-                # Show the generated content
-                st.text_area(
-                    "Generated .env file content:",
-                    value=env_content,
-                    height=300,
-                    help="Copy this content to a .env file or use it directly"
-                )
+            uploaded_file = st.file_uploader(
+                "Choose environment file",
+                type=None,
+                help="Upload any environment file containing your CDF project configuration (accepts all file types)"
+            )
+            
+            if uploaded_file is not None:
+                try:
+                    # Read the uploaded file
+                    content = uploaded_file.read().decode('utf-8')
+                    env_vars = parse_env_file_content(content)
+                    
+                    # Validate environment variables
+                    missing_vars = validate_env_vars(env_vars)
+                    if missing_vars:
+                        st.error(f"❌ Missing required environment variables: {', '.join(missing_vars)}")
+                    else:
+                        st.success("✅ Environment file loaded successfully!")
+                        
+                        # Show preview of environment variables (hide sensitive values)
+                        with st.expander("🔍 Preview Environment Variables"):
+                            for key, value in env_vars.items():
+                                if 'secret' in key.lower() or 'password' in key.lower() or 'token' in key.lower():
+                                    display_value = "***" + value[-4:] if len(value) > 4 else "***"
+                                else:
+                                    display_value = value
+                                st.text(f"{key}={display_value}")
+                    
+                    # Store in session state for later use
+                    st.session_state['env_vars'] = env_vars
+                    
+                except Exception as e:
+                    st.error(f"❌ Error reading .env file: {e}")
+    
+        elif env_option == "🔄 Generate from current CDF connection":
+            st.info("🔄 **Generate from CDF** - Create .env file from your current CDF connection")
+        
+            if CLIENT:
+                st.success("✅ Connected to CDF! Generating environment file...")
                 
-                # Parse and store the generated environment variables
-                env_vars = parse_env_file_content(env_content)
-                st.session_state['env_vars'] = env_vars
-                
-                # Download button
-                st.download_button(
-                    label="📥 Download .env file",
-                    data=env_content,
-                    file_name="cdfenv.local.sh",
-                    mime="text/plain",
-                    help="Download the generated environment file"
-                )
+                env_content = generate_env_file_from_cdf()
+                if env_content:
+                    # Show the generated content
+                    st.text_area(
+                        "Generated .env file content:",
+                        value=env_content,
+                        height=300,
+                        help="Copy this content to a .env file or use it directly"
+                    )
+                    
+                    # Parse and store the generated environment variables
+                    env_vars = parse_env_file_content(env_content)
+                    st.session_state['env_vars'] = env_vars
+                    
+                    # Download button
+                    st.download_button(
+                        label="📥 Download .env file",
+                        data=env_content,
+                        file_name="cdfenv.local.sh",
+                        mime="text/plain",
+                        help="Download the generated environment file"
+                    )
+                else:
+                    st.error("❌ Could not generate environment file from CDF connection")
             else:
-                st.error("❌ Could not generate environment file from CDF connection")
-        else:
-            st.warning("⚠️ **No CDF Connection** - Cannot generate environment file")
-            st.write("Make sure you're running this app in a CDF environment or have proper authentication configured.")
+                st.warning("⚠️ **No CDF Connection** - Cannot generate environment file")
+                st.write("Make sure you're running this app in a CDF environment or have proper authentication configured.")
     
-    else:  # Skip option
-        st.info("⏭️ **Skip Environment Setup** - Using existing environment variables")
-        st.write("The deployment will use environment variables that are already available in the current environment.")
-    
-    st.divider()
-    
-    # Repository configuration
-    st.header("📁 Repository Configuration")
-    
-    # Input method selection
-    input_method = st.radio(
-        "How would you like to specify the repository?",
-        ["🔗 Paste GitHub URL", "✏️ Enter Owner & Name"],
-        help="Choose how you want to specify the repository"
-    )
+        else:  # Skip option
+            st.info("⏭️ **Skip Environment Setup** - Using existing environment variables")
+            st.write("The deployment will use environment variables that are already available in the current environment.")
+        
+        st.divider()
+        
+        # Repository configuration
+        st.header("📁 Repository Configuration")
+        
+        # Input method selection
+        input_method = st.radio(
+            "How would you like to specify the repository?",
+            ["🔗 Paste GitHub URL", "✏️ Enter Owner & Name"],
+            help="Choose how you want to specify the repository"
+        )
     
     # Repository access type selection
     access_type = st.radio(
@@ -1855,12 +1933,12 @@ def main():
                         key="private_repo_name"
                     )
     
-    # Branch selection
-    if st.button("🔄 Load Branches"):
-        if not repo_owner or not repo_name:
-            st.error("Please provide both repository owner and name")
-        else:
-            with st.spinner("Loading branches..."):
+        # Branch selection
+        if st.button("🔄 Load Branches"):
+            if not repo_owner or not repo_name:
+                st.error("Please provide both repository owner and name")
+            else:
+                with st.spinner("Loading branches..."):
                 # For public repos, don't use token; for private repos, use token if available
                 token = None
                 if "Private Repository" in access_type:
@@ -1876,27 +1954,27 @@ def main():
                 else:
                     st.error("Failed to load branches")
     
-    # Show branch selector if branches are loaded
-    if 'available_branches' in st.session_state:
-        selected_branch = st.selectbox(
-            "Select Branch",
-            st.session_state['available_branches'],
-            index=0 if "main" not in st.session_state['available_branches'] else st.session_state['available_branches'].index("main")
-        )
-    else:
-        selected_branch = st.text_input("Branch", value="main")
+        # Show branch selector if branches are loaded
+        if 'available_branches' in st.session_state:
+            selected_branch = st.selectbox(
+                "Select Branch",
+                st.session_state['available_branches'],
+                index=0 if "main" not in st.session_state['available_branches'] else st.session_state['available_branches'].index("main")
+            )
+        else:
+            selected_branch = st.text_input("Branch", value="main")
+        
+        st.markdown("---")
+        
+        # Download and deploy section
+        st.header("⬇️ Download & Deploy")
+        
+        # Add alternative upload option for CORS issues
+        st.info("💡 **Alternative**: If you encounter CORS issues, you can download the repository manually and upload it as a ZIP file below.")
     
-    st.markdown("---")
-    
-    # Download and deploy section
-    st.header("⬇️ Download & Deploy")
-    
-    # Add alternative upload option for CORS issues
-    st.info("💡 **Alternative**: If you encounter CORS issues, you can download the repository manually and upload it as a ZIP file below.")
-    
-    # CDF Proxy Management (if CDF client is available)
-    if CLIENT:
-        with st.expander("🗄️ CDF Proxy Management (Advanced)"):
+        # CDF Proxy Management (if CDF client is available)
+        if CLIENT:
+            with st.expander("🗄️ CDF Proxy Management (Advanced)"):
             st.info("**CDF Proxy**: Store repositories in CDF for faster, CORS-free downloads")
             
             col1, col2 = st.columns(2)
@@ -1923,31 +2001,50 @@ def main():
                     except Exception as e:
                         st.error(f"Failed to clear CDF proxy: {e}")
     
-    uploaded_zip = st.file_uploader(
-        "📁 Upload Repository ZIP (Alternative to GitHub download)",
-        type=['zip'],
-        help="If GitHub download fails due to CORS issues, download the repository manually and upload it here"
-    )
+        uploaded_zip = st.file_uploader(
+            "📁 Upload Repository ZIP (Alternative to GitHub download)",
+            type=['zip'],
+            help="If GitHub download fails due to CORS issues, download the repository manually and upload it here"
+        )
     
-    if uploaded_zip is not None:
-        st.success("✅ ZIP file uploaded successfully!")
-        st.info("You can now proceed with the deployment using the uploaded file.")
-        
-        # Store the uploaded file path for later use
-        temp_zip_path = os.path.join(tempfile.gettempdir(), f"uploaded_{uploaded_zip.name}")
-        with open(temp_zip_path, "wb") as f:
-            f.write(uploaded_zip.getbuffer())
-        st.session_state['uploaded_zip_path'] = temp_zip_path
+        if uploaded_zip is not None:
+            st.success("✅ ZIP file uploaded successfully!")
+            st.info("You can now proceed with the deployment using the uploaded file.")
+            
+            # Store the uploaded file path for later use
+            temp_zip_path = os.path.join(tempfile.gettempdir(), f"uploaded_{uploaded_zip.name}")
+            with open(temp_zip_path, "wb") as f:
+                f.write(uploaded_zip.getbuffer())
+            st.session_state['uploaded_zip_path'] = temp_zip_path
     
-    if st.button("🚀 Download Repository & Deploy", type="primary"):
-        if not repo_owner or not repo_name:
-            st.error("Please provide both repository owner and name")
-            return
+        # Show deployment options before download
+        st.subheader("🎯 Deployment Options")
+    
+        # Deployment type selection
+        deployment_type = st.radio(
+            "Choose deployment type:",
+            ["🚀 Deploy to Target Project (z-brent)", "🏠 Deploy to Same SaaS Project (bgfast)"],
+            help="Target project requires .env file. Same SaaS project avoids CORS issues."
+        )
+    
+        # If same SaaS project, show config file selection
+        if "Same SaaS Project" in deployment_type:
+            st.info("🏠 **Same SaaS Project Deployment**")
+            st.info("✅ **No CORS issues** - deploys to same project as this app")
+            st.info("📋 **Config files will be shown after download**")
+    
+        if st.button("🚀 Download Repository & Deploy", type="primary"):
+            if not repo_owner or not repo_name:
+                st.error("Please provide both repository owner and name")
+                return
         
         # Check authentication for private repos
         if "Private Repository" in access_type and 'github_token' not in st.session_state:
             st.error("Authentication required for private repositories. Please login with GitHub first.")
             return
+        
+        # Store deployment type in session state
+        st.session_state['deployment_type'] = deployment_type
         
         # Check if environment variables are available
         env_vars = st.session_state.get('env_vars', {})
@@ -1991,6 +2088,11 @@ def main():
             
             if st.session_state['debug_mode']:
                 st.info(f"Extracted to: {extracted_path}")
+            
+            # README files are now committed to the repository
+            st.info("📋 **README files are included in the repository**")
+            st.info("✅ **README.all.md** - Documentation for 'all' environment")
+            st.info("✅ **README.weather.md** - Documentation for 'weather' environment")
         
         # Step 3: Find all config files in the repository
         st.info(f"🔍 Searching for config files in: {extracted_path}")
@@ -2008,6 +2110,11 @@ def main():
             st.success(f"✅ Found configuration files:")
             for config_file in config_files:
                 st.write(f"  📄 {config_file}")
+            # Persist for later steps and advance
+            st.session_state['extracted_path'] = extracted_path
+            st.session_state['config_files'] = config_files
+            st.session_state['workflow_step'] = 2
+            st.rerun()
         else:
             st.warning("⚠️ No config.*.yaml files found in the repository.")
             st.info("💡 The repository might not be a Cognite toolkit project, or config files might be in a different location.")
@@ -2047,7 +2154,117 @@ def main():
             env_file_path = write_env_file(env_vars, extracted_path)
             st.info(f"📝 Environment file written to: {env_file_path}")
         
-        # Step 5: Run cdf build
+        # End of Step 1 content
+        return
+        
+        # Step 2: Select Configuration
+        if st.session_state['workflow_step'] == 2:
+            st.subheader("📋 Step 2: Select Configuration")
+            
+            # Load discovered files from session or re-discover
+            extracted_path = st.session_state.get('extracted_path')
+            config_files = st.session_state.get('config_files') or (find_config_files(extracted_path) if extracted_path else [])
+            
+            if not config_files:
+                st.error("❌ No config files found in the repository")
+                return
+            
+            # Create tabs for each config file
+            tab_names = []
+            for config_file in config_files:
+                env_name = config_file.replace('config.', '').replace('.yaml', '')
+                tab_names.append(f"{config_file} ({env_name})")
+            
+            # Create tabs
+            tabs = st.tabs(tab_names)
+            
+            # Create content for each tab
+            for i, config_file in enumerate(config_files):
+                env_name = config_file.replace('config.', '').replace('.yaml', '')
+                
+                with tabs[i]:
+                    st.subheader(f"📋 {config_file}")
+                    st.info(f"🎯 **Environment:** {env_name}")
+                    
+                    # Show README content for this config
+                    readme_path = find_readme_for_config(extracted_path, config_file)
+                    if readme_path:
+                        st.subheader(f"📖 README for {config_file}")
+                        st.info(f"✅ **Found README at:** {readme_path}")
+                        readme_content = read_readme_content(readme_path)
+                        with st.expander("View README content", expanded=True):
+                            st.markdown(readme_content)
+                    else:
+                        st.info(f"ℹ️ No README file found for {config_file}")
+                        st.info("💡 **Tip:** Add a README.{env_name}.md file to provide detailed information about this configuration.")
+            
+            # Radio button for config selection
+            selected_config = st.radio(
+                "Choose configuration to deploy:",
+                config_files,
+                help="Select which config file to use for deployment",
+                format_func=lambda x: f"{x} (Environment: {x.replace('config.', '').replace('.yaml', '')})"
+            )
+            
+            col1, col2 = st.columns([1, 1])
+            with col1:
+                if st.button("⬅️ Back to Download", help="Go back to download step"):
+                    st.session_state['workflow_step'] = 1
+                    st.rerun()
+            with col2:
+                if st.button("➡️ Continue to Build", type="primary"):
+                    st.session_state['selected_config'] = selected_config
+                    st.session_state['selected_env'] = selected_config.replace('config.', '').replace('.yaml', '')
+                    st.session_state['workflow_step'] = 3
+                    st.rerun()
+        
+        # Step 3: Build Package
+        if st.session_state['workflow_step'] == 3:
+            st.subheader("🔨 Step 3: Build Package")
+            selected_config = st.session_state.get('selected_config')
+            selected_env = st.session_state.get('selected_env')
+            
+            st.info(f"✅ **Selected config:** {selected_config}")
+            st.info(f"🎯 **Environment:** {selected_env}")
+            
+            if st.button("🔨 Start Build", type="primary"):
+                st.session_state['workflow_step'] = 4
+                st.rerun()
+        
+        # Step 4: Deploy Package
+        if st.session_state['workflow_step'] == 4:
+            st.subheader("🚀 Step 4: Deploy Package")
+            selected_config = st.session_state.get('selected_config')
+            selected_env = st.session_state.get('selected_env')
+            
+            st.info(f"📋 **Config:** {selected_config}")
+            st.info(f"🎯 **Environment:** {selected_env}")
+            
+            if st.button("🚀 Start Deployment", type="primary"):
+                st.session_state['workflow_step'] = 5
+                st.rerun()
+        
+        # Step 5: Verify Deployment
+        if st.session_state['workflow_step'] == 5:
+            st.subheader("✅ Step 5: Verify Deployment")
+            st.success("🎉 **Deployment completed successfully!**")
+            st.info("📊 **Deployment Summary:**")
+            st.info(f"   • **Config:** {st.session_state.get('selected_config')}")
+            st.info(f"   • **Environment:** {st.session_state.get('selected_env')}")
+            st.info("   • **Status:** ✅ Success")
+            
+            if st.button("🔄 Start New Deployment", type="primary"):
+                st.session_state['workflow_step'] = 1
+                st.session_state['selected_config'] = None
+                st.session_state['selected_env'] = None
+                st.rerun()
+        
+        # Only proceed to build if we're past step 2
+        if st.session_state['workflow_step'] < 3:
+            return
+        
+        
+        # Step 6: Run cdf build
         st.subheader("🔨 Building Project")
         with st.spinner("Running cdf build..."):
             build_success, build_stdout, build_stderr = run_cognite_toolkit_build(extracted_path, env_vars)
@@ -2100,15 +2317,32 @@ def main():
                     """)
                 return
         
-        # Step 6: Deploy to CDF
+        # Step 7: Deploy to CDF
         st.subheader("🚀 Deploying to CDF")
         
-        # Deploy options
-        deploy_option = st.radio(
-            "Choose deployment option:",
-            ["🚀 Deploy to CDF", "🔍 Dry Run (Preview Changes)", "🏠 Deploy to Same SaaS Project"],
-            help="Deploy will make actual changes to CDF. Dry run will show what would be deployed without making changes. Same SaaS project avoids CORS issues."
-        )
+        # Get deployment type from session state
+        deployment_type = st.session_state.get('deployment_type', '🚀 Deploy to Target Project (z-brent)')
+        
+        # Show deployment options based on the selected type
+        if "Same SaaS Project" in deployment_type:
+            st.info("🏠 **Same SaaS Project Deployment Selected**")
+            st.info("✅ **No CORS issues** - deploying to same project as this app")
+            
+            # Deploy options for same SaaS project
+            deploy_option = st.radio(
+                "Choose deployment option:",
+                ["🚀 Deploy to Same SaaS Project", "🔍 Dry Run (Preview Changes)"],
+                help="Deploy will make actual changes to CDF. Dry run will show what would be deployed without making changes.",
+                key="deploy_option_saas"
+            )
+        else:
+            # Deploy options for target project
+            deploy_option = st.radio(
+                "Choose deployment option:",
+                ["🚀 Deploy to CDF", "🔍 Dry Run (Preview Changes)"],
+                help="Deploy will make actual changes to CDF. Dry run will show what would be deployed without making changes.",
+                key="deploy_option_target"
+            )
         
         # Note: CDF client check removed - deployment works via subprocess calls
         
@@ -2137,14 +2371,18 @@ def main():
                 return
             
             st.info(f"📁 **Found {len(config_files)} config files:**")
-            for config_file in config_files:
-                st.info(f"   - {config_file}")
+            
+            # Display config files in a more user-friendly way
+            for i, config_file in enumerate(config_files, 1):
+                env_name = config_file.replace('config.', '').replace('.yaml', '')
+                st.info(f"   {i}. **{config_file}** → Environment: `{env_name}`")
             
             # Let user choose config file
             selected_config = st.selectbox(
                 "Choose config file to deploy:",
                 config_files,
-                help="Select which config file to use for deployment"
+                help="Select which config file to use for deployment",
+                format_func=lambda x: f"{x} (Environment: {x.replace('config.', '').replace('.yaml', '')})"
             )
             
             if selected_config:
@@ -2157,6 +2395,9 @@ def main():
                 with st.spinner(f"Deploying to same SaaS project using {selected_config}..."):
                     deploy_success, deploy_stdout, deploy_stderr = run_cognite_toolkit_deploy_same_saas(extracted_path, selected_config, env_name)
                     command_used = f"cdf deploy --env {env_name}"
+            else:
+                st.warning("⚠️ Please select a config file to continue")
+                return
             
             if deploy_success:
                 st.success("🎉 Deployment completed successfully!")
