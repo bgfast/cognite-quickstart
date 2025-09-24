@@ -35,36 +35,21 @@ def render_step_1():
     state.set_config_files(config_files)
     state.set_env_vars(env_vars)
     
-    # Show config selection UI in Step 1
-    st.header("📋 Configuration Selection")
-    st.info(f"Found {len(config_files)} configuration files:")
-    
-    # Display config files with selection
-    selected_config = st.radio(
-        "Choose configuration to deploy:",
-        config_files,
-        format_func=lambda x: f"{os.path.basename(x)} (Environment: {x.replace('config.', '').replace('.yaml', '')})",
-    )
-    
-    if selected_config:
-        state.set_selected_config(selected_config)
-        state.set_selected_env(selected_config.replace('config.', '').replace('.yaml', ''))
-        st.success(f"✅ Selected: {os.path.basename(selected_config)}")
-        
-        # Show continue button to proceed to Step 2
-        if st.button("➡️ Continue to Step 2", type="primary"):
-            state.set_workflow_step(2)
-            st.rerun()
-    else:
-        st.info("Please select a configuration file to continue.")
+    # Show continue button to proceed to Step 2 (Configuration Selection)
+    st.success(f"✅ Found {len(config_files)} configuration files")
+    if st.button("➡️ Continue to Step 2", type="primary"):
+        state.set_workflow_step(2)
+        st.rerun()
 
 def render_step_2():
-    st.subheader("📋 Step 2: Select Configuration")
+    st.header("📋 Step 2: Select Configuration")
     extracted_path = state.get_extracted_path()
     config_files = state.get_config_files()
     if not extracted_path or not config_files:
         st.warning("Nothing to select yet. Go back to Step 1.")
         return
+    
+    st.info(f"Found {len(config_files)} configuration files:")
 
     tabs = st.tabs([f"{cf} ({cf.replace('config.', '').replace('.yaml', '')})" for cf in config_files])
     for i, config_file in enumerate(config_files):

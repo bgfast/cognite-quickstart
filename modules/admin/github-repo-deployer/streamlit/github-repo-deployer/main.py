@@ -17,10 +17,10 @@ from dotenv import load_dotenv
 from services import ui_steps
 
 # Set page config first (must be before any other Streamlit commands)
-st.set_page_config(
-    page_title="GitHub Repo to CDF Deployer v1.84",
-    page_icon="🚀",
-    layout="wide",
+        st.set_page_config(
+    page_title="GitHub Repo to CDF Deployer v1.85",
+            page_icon="🚀",
+            layout="wide",
     initial_sidebar_state="expanded"
 )
 
@@ -50,7 +50,7 @@ def main():
     
     st.title("🚀 GitHub Repo to CDF Deployer")
     st.markdown("Download files from public GitHub repositories and deploy them using the Cognite toolkit")
-    st.caption("Version 1.84 - Added real-time progress output for download, build, and deploy")
+    st.caption("Version 1.85 - Fixed configuration selection to be in Step 2, not Step 1")
     
     # Initialize workflow step
     if 'workflow_step' not in st.session_state:
@@ -104,7 +104,7 @@ def main():
                 rate_status = check_rate_limit_status()
                 if rate_status['remaining'] > 0:
                     st.success(f"✅ GitHub API: {rate_status['remaining']}/{rate_status['limit']} requests remaining")
-                else:
+                    else:
                     st.warning(f"⚠️ GitHub API rate limited. Reset at {rate_status['reset_time']}")
             except ImportError:
                 st.warning("⚠️ Rate limiter not available")
@@ -124,8 +124,8 @@ def main():
                 
         except ImportError:
             st.warning("⚠️ Cache manager not available")
-        
-        if st.session_state['debug_mode']:
+            
+            if st.session_state['debug_mode']:
             st.markdown("**Debug Info:**")
             st.write(f"CDF Client: {'Connected' if CLIENT else 'Not Connected'}")
             st.write(f"Local Mode: {IS_LOCAL_ENV}")
@@ -134,26 +134,26 @@ def main():
     if st.session_state['workflow_step'] == 1:
         ui_steps.render_step_1()
         return
-    
+        
     # Step 2: Select Configuration
-    if st.session_state['workflow_step'] == 2:
-        ui_steps.render_step_2()
+        if st.session_state['workflow_step'] == 2:
+            ui_steps.render_step_2()
         return
-    
-    # Step 3: Build Package
-    if st.session_state['workflow_step'] == 3:
-        ui_steps.render_step_3()
+        
+        # Step 3: Build Package
+        if st.session_state['workflow_step'] == 3:
+            ui_steps.render_step_3()
         return
-    
-    # Step 4: Deploy Package
-    if st.session_state['workflow_step'] == 4:
-        ui_steps.render_step_4()
+        
+        # Step 4: Deploy Package
+        if st.session_state['workflow_step'] == 4:
+            ui_steps.render_step_4()
         return
-    
-    # Step 5: Verify Deployment
-    if st.session_state['workflow_step'] == 5:
-        ui_steps.render_step_5()
-        return
+        
+        # Step 5: Verify Deployment
+        if st.session_state['workflow_step'] == 5:
+            ui_steps.render_step_5()
+            return
 
 if __name__ == "__main__":
     main()
