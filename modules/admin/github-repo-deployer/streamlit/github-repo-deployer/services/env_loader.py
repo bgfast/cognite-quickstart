@@ -1,5 +1,5 @@
 import streamlit as st
-import state
+from . import state
 import os
 
 def parse_env_file_content(content):

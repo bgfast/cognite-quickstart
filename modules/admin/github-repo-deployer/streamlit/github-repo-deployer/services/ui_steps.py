@@ -2,11 +2,11 @@ import os
 import tempfile
 import streamlit as st
 
-import env_loader
-import github_service
-import readme_finder
-import toolkit_service
-import state
+from . import env_loader
+from . import github_service
+from . import readme_finder
+from . import toolkit_service
+from . import state
 
 def render_step_1():
     st.header("⚙️ Environment Configuration")
@@ -17,23 +17,21 @@ def render_step_1():
         return
     repo_owner, repo_name, selected_branch, access_type = repo_input
 
-    zip_path = github_service.render_download_section(repo_owner, repo_name, selected_branch, access_type)
-    if not zip_path:
+    # Download repository (returns directory path, not ZIP path)
+    repo_path = github_service.render_download_section(repo_owner, repo_name, selected_branch, access_type)
+    if not repo_path:
         return
 
-    with st.spinner("Extracting files..."):
-        extracted_path = github_service.extract_zip_to_temp_dir(zip_path)
-        if not extracted_path:
-            st.error("Failed to extract files")
-            return
-
-    config_files = github_service.find_config_files(extracted_path)
+    # No extraction needed - repo_path is already the extracted directory
+    st.success("✅ Repository downloaded successfully!")
+    
+    config_files = github_service.find_config_files(repo_path)
     if not config_files:
         st.warning("⚠️ No config.*.yaml files found in the repository.")
         return
 
-    # Store the extracted path and config files
-    state.set_extracted_path(extracted_path)
+    # Store the repository path and config files
+    state.set_extracted_path(repo_path)
     state.set_config_files(config_files)
     state.set_env_vars(env_vars)
     
@@ -53,9 +51,9 @@ def render_step_1():
         state.set_selected_env(selected_config.replace('config.', '').replace('.yaml', ''))
         st.success(f"✅ Selected: {os.path.basename(selected_config)}")
         
-        # Show continue button to proceed to Build
-        if st.button("➡️ Continue to Build", type="primary"):
-            state.set_workflow_step(3)
+        # Show continue button to proceed to Step 2
+        if st.button("➡️ Continue to Step 2", type="primary"):
+            state.set_workflow_step(2)
             st.rerun()
     else:
         st.info("Please select a configuration file to continue.")
