@@ -18,9 +18,9 @@ from services import ui_steps
 
 # Set page config first (must be before any other Streamlit commands)
 st.set_page_config(
-    page_title="GitHub Repo to CDF Deployer v1.88",
-    page_icon="🚀",
-    layout="wide",
+    page_title="GitHub Repo to CDF Deployer v1.89",
+            page_icon="🚀",
+            layout="wide",
     initial_sidebar_state="expanded"
 )
 
@@ -50,7 +50,7 @@ def main():
     
     st.title("🚀 GitHub Repo to CDF Deployer")
     st.markdown("Download files from public GitHub repositories and deploy them using the Cognite toolkit")
-    st.caption("Version 1.88 - Fixed IndentationError in st.set_page_config (final fix)")
+    st.caption("Version 1.89 - Fixed all syntax errors with automated syntax checker")
     
     # Initialize workflow step
     if 'workflow_step' not in st.session_state:
@@ -104,7 +104,7 @@ def main():
                 rate_status = check_rate_limit_status()
                 if rate_status['remaining'] > 0:
                     st.success(f"✅ GitHub API: {rate_status['remaining']}/{rate_status['limit']} requests remaining")
-                    else:
+                else:
                     st.warning(f"⚠️ GitHub API rate limited. Reset at {rate_status['reset_time']}")
             except ImportError:
                 st.warning("⚠️ Rate limiter not available")
@@ -126,9 +126,9 @@ def main():
             st.warning("⚠️ Cache manager not available")
             
             if st.session_state['debug_mode']:
-            st.markdown("**Debug Info:**")
-            st.write(f"CDF Client: {'Connected' if CLIENT else 'Not Connected'}")
-            st.write(f"Local Mode: {IS_LOCAL_ENV}")
+                st.markdown("**Debug Info:**")
+                st.write(f"CDF Client: {'Connected' if CLIENT else 'Not Connected'}")
+                st.write(f"Local Mode: {IS_LOCAL_ENV}")
     
     # Step 1: Download & Environment
     if st.session_state['workflow_step'] == 1:
