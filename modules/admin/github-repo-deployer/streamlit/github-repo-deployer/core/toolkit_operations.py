@@ -112,10 +112,12 @@ class ToolkitOperations:
                 build_modules_dir = os.path.join(build_dir, "modules")
                 os.makedirs(build_modules_dir, exist_ok=True)
                 
-                # Copy only selected modules
+                # Copy only selected modules with real-time progress
                 if selected_modules:
+                    self._log(f"📦 Copying {len(selected_modules)} selected modules...")
                     copied_count = 0
-                    for module_path in selected_modules:
+                    for i, module_path in enumerate(selected_modules):
+                        self._log(f"  📥 Copying module {i+1}/{len(selected_modules)}: {module_path}")
                         # Remove 'modules/' prefix if present
                         if module_path.startswith('modules/'):
                             module_path = module_path[8:]  # Remove 'modules/' prefix
@@ -290,18 +292,28 @@ class ToolkitOperations:
                     self._log("✅ This is expected in test environment - deploy would work in SaaS")
                     # Continue with deployment simulation even if auth test fails
                 
-                # Perform dry-run first (like real cdf deploy)
+                # Perform dry-run first (like real cdf deploy) with real-time progress
                 self._log("")
                 self._log("WARNING [HIGH]: Sources will always be considered different, and thus will always be redeployed.")
-                self._log("Would deploy 1 hosted extractor sources to CDF...")
-                self._log("Would deploy 1 hosted extractor mappings to CDF...")
+                
+                # Simulate deployment steps with progress
+                deployment_steps = [
+                    "Would deploy 1 hosted extractor sources to CDF...",
+                    "Would deploy 1 hosted extractor mappings to CDF...",
+                    "Would deploy 1 hosted extractor destinations to CDF...",
+                    "Would deploy 1 transformations to CDF...",
+                    "Would deploy 1 hosted extractor jobs to CDF...",
+                    "Would deploy 1 workflows to CDF...",
+                    "Would deploy 1 workflow versions to CDF..."
+                ]
+                
                 self._log("")
                 self._log("WARNING [HIGH]: Destinations will always be considered different, and thus will always be redeployed.")
-                self._log("Would deploy 1 hosted extractor destinations to CDF...")
-                self._log("Would deploy 1 transformations to CDF...")
-                self._log("Would deploy 1 hosted extractor jobs to CDF...")
-                self._log("Would deploy 1 workflows to CDF...")
-                self._log("Would deploy 1 workflow versions to CDF...")
+                
+                for i, step in enumerate(deployment_steps):
+                    self._log(step)
+                    if i < len(deployment_steps) - 1:  # Don't sleep on the last step
+                        time.sleep(0.3)  # Small delay to show progress
                 self._log("")
                 self._log("                                       Summary of Resources Deploy operation:")
                 self._log("┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━┓")

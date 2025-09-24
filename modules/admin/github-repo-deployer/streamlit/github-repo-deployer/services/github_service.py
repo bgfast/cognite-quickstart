@@ -196,6 +196,10 @@ def download_github_repo_zip(repo_owner, repo_name, branch="main"):
         
         st.info(f"📁 Found {len(files)} files in repository")
         
+        # Create progress bar for download
+        progress_bar = st.progress(0)
+        status_text = st.empty()
+        
         # Create temporary directory (simulating SaaS temp storage)
         temp_dir = tempfile.mkdtemp()
         repo_path = os.path.join(temp_dir, f"{repo_name}-{branch}")
@@ -203,15 +207,21 @@ def download_github_repo_zip(repo_owner, repo_name, branch="main"):
         
         st.info(f"📂 Created temp directory: {repo_path}")
         
-        # Download each file
+        # Download each file with real-time progress
         files_downloaded = 0
+        important_files = ['config.all.yaml', 'config.weather.yaml', 'requirements.txt', 'README.md']
         
         for i, item in enumerate(files):
             file_path = item['path']
             
+            # Update progress bar and status
+            progress = (i + 1) / len(files)
+            progress_bar.progress(progress)
+            status_text.text(f"📥 Downloading file {i+1}/{len(files)}: {file_path}")
+            
             # Add delay every 10 files to avoid rate limiting
             if i > 0 and i % 10 == 0:
-                st.info(f"  ⏳ Rate limiting protection: waiting 2 seconds... (file {i}/{len(files)})")
+                status_text.text(f"⏳ Rate limiting protection: waiting 2 seconds... (file {i}/{len(files)})")
                 time.sleep(2)
             
             # Get file content
@@ -222,7 +232,7 @@ def download_github_repo_zip(repo_owner, repo_name, branch="main"):
             if file_response.status_code == 403:
                 error_data = file_response.json()
                 if 'rate limit' in error_data.get('message', '').lower():
-                    st.warning(f"  ⚠️ Rate limit hit on file {i+1}/{len(files)}. Waiting 30 seconds...")
+                    status_text.text(f"⚠️ Rate limit hit on file {i+1}/{len(files)}. Waiting 30 seconds...")
                     time.sleep(30)
                     file_response = requests.get(file_url, timeout=10)
             
@@ -242,9 +252,16 @@ def download_github_repo_zip(repo_owner, repo_name, branch="main"):
                     files_downloaded += 1
                     
                     # Show progress for important files
-                    if file_path in ['config.all.yaml', 'config.weather.yaml', 'requirements.txt', 'README.md']:
+                    if file_path in important_files:
                         st.info(f"  📄 Downloaded: {file_path}")
+                else:
+                    status_text.text(f"⏭️ Skipping non-file: {file_path}")
+            else:
+                status_text.text(f"❌ Failed to download: {file_path} (status: {file_response.status_code})")
         
+        # Complete progress
+        progress_bar.progress(1.0)
+        status_text.text(f"✅ Downloaded {files_downloaded} files successfully!")
         st.success(f"✅ Downloaded {files_downloaded} files successfully!")
         
         # Cache the downloaded repository directly (no ZIP creation)
