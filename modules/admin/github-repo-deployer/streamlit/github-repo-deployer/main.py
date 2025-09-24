@@ -18,7 +18,7 @@ from services import ui_steps
 
 # Set page config first (must be before any other Streamlit commands)
         st.set_page_config(
-    page_title="GitHub Repo to CDF Deployer v1.85",
+    page_title="GitHub Repo to CDF Deployer v1.86",
             page_icon="🚀",
             layout="wide",
     initial_sidebar_state="expanded"
@@ -50,7 +50,7 @@ def main():
     
     st.title("🚀 GitHub Repo to CDF Deployer")
     st.markdown("Download files from public GitHub repositories and deploy them using the Cognite toolkit")
-    st.caption("Version 1.85 - Fixed configuration selection to be in Step 2, not Step 1")
+    st.caption("Version 1.86 - Fixed radio button screen clearing issue in Step 2")
     
     # Initialize workflow step
     if 'workflow_step' not in st.session_state:

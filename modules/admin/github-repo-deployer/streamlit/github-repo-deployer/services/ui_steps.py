@@ -61,23 +61,41 @@ def render_step_2():
                 with st.expander("README", expanded=True):
                     st.markdown(readme_finder.read_readme_content(readme_path))
 
+    # Set default selection to first config file
+    default_index = 0
     selected_config = st.radio(
         "Choose configuration to deploy:",
         config_files,
+        index=default_index,
         format_func=lambda x: f"{x} (Environment: {x.replace('config.', '').replace('.yaml', '')})",
     )
 
+    # Show selected configuration feedback
+    if selected_config:
+        env_name = selected_config.replace('config.', '').replace('.yaml', '')
+        st.success(f"✅ Selected: {selected_config} (Environment: {env_name})")
+        
+        # Show configuration details
+        with st.expander("📋 Configuration Details", expanded=False):
+            st.info(f"**File:** {selected_config}")
+            st.info(f"**Environment:** {env_name}")
+            st.info(f"**Path:** {extracted_path}")
+
+    # Navigation buttons
     col1, col2 = st.columns([1, 1])
     with col1:
         if st.button("⬅️ Back to Download"):
             state.set_workflow_step(1)
             st.rerun()
     with col2:
-        if st.button("➡️ Continue to Build", type="primary"):
-            state.set_selected_config(selected_config)
-            state.set_selected_env(selected_config.replace('config.', '').replace('.yaml', ''))
-            state.set_workflow_step(3)
-            st.rerun()
+        if st.button("➡️ Continue to Build", type="primary", disabled=not selected_config):
+            if selected_config:
+                state.set_selected_config(selected_config)
+                state.set_selected_env(selected_config.replace('config.', '').replace('.yaml', ''))
+                state.set_workflow_step(3)
+                st.rerun()
+            else:
+                st.warning("Please select a configuration first.")
 
 def render_step_3():
     st.subheader("🔨 Step 3: Build Package")
