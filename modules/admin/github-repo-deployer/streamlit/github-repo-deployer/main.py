@@ -17,10 +17,10 @@ from dotenv import load_dotenv
 from services import ui_steps
 
 # Set page config first (must be before any other Streamlit commands)
-        st.set_page_config(
-    page_title="GitHub Repo to CDF Deployer v1.87",
-            page_icon="🚀",
-            layout="wide",
+st.set_page_config(
+    page_title="GitHub Repo to CDF Deployer v1.88",
+    page_icon="🚀",
+    layout="wide",
     initial_sidebar_state="expanded"
 )
 
@@ -50,7 +50,7 @@ def main():
     
     st.title("🚀 GitHub Repo to CDF Deployer")
     st.markdown("Download files from public GitHub repositories and deploy them using the Cognite toolkit")
-    st.caption("Version 1.87 - Fixed IndentationError in st.set_page_config")
+    st.caption("Version 1.88 - Fixed IndentationError in st.set_page_config (final fix)")
     
     # Initialize workflow step
     if 'workflow_step' not in st.session_state:
