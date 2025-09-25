@@ -18,7 +18,7 @@ from services import ui_steps
 
 # Set page config first (must be before any other Streamlit commands)
 st.set_page_config(
-    page_title="GitHub Repo to CDF Deployer v1.89",
+    page_title="GitHub Repo to CDF Deployer v1.90",
             page_icon="🚀",
             layout="wide",
     initial_sidebar_state="expanded"
@@ -50,7 +50,7 @@ def main():
     
     st.title("🚀 GitHub Repo to CDF Deployer")
     st.markdown("Download files from public GitHub repositories and deploy them using the Cognite toolkit")
-    st.caption("Version 1.89 - Fixed all syntax errors with automated syntax checker")
+    st.caption("Version 1.90 - Added bundled ZIP fast path; fixed step routing")
     
     # Initialize workflow step
     if 'workflow_step' not in st.session_state:
@@ -136,24 +136,24 @@ def main():
         return
         
     # Step 2: Select Configuration
-        if st.session_state['workflow_step'] == 2:
-            ui_steps.render_step_2()
+    if st.session_state['workflow_step'] == 2:
+        ui_steps.render_step_2()
         return
-        
-        # Step 3: Build Package
-        if st.session_state['workflow_step'] == 3:
-            ui_steps.render_step_3()
+
+    # Step 3: Build Package
+    if st.session_state['workflow_step'] == 3:
+        ui_steps.render_step_3()
         return
-        
-        # Step 4: Deploy Package
-        if st.session_state['workflow_step'] == 4:
-            ui_steps.render_step_4()
+
+    # Step 4: Deploy Package
+    if st.session_state['workflow_step'] == 4:
+        ui_steps.render_step_4()
         return
-        
-        # Step 5: Verify Deployment
-        if st.session_state['workflow_step'] == 5:
-            ui_steps.render_step_5()
-            return
+
+    # Step 5: Verify Deployment
+    if st.session_state['workflow_step'] == 5:
+        ui_steps.render_step_5()
+        return
 
 if __name__ == "__main__":
     main()

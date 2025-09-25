@@ -35,6 +35,8 @@ This document baselines the expected behavior and structure of the Streamlit app
    - Render sub-tabs, one per `config.*.yaml` file; show associated README if present.
    - Selecting a config sets `st.session_state['selected_config']` and `st.session_state['selected_env']`.
    - step 3 is always enabled because no action is required on step 2. one is selected by default. the user can change it if they want but are not required to
+   - Radio selection must not clear or collapse other UI elements; provide immediate visual feedback ("Selected: <file>") and a "Configuration Details" expander
+   - No rerun on radio change; only rerun on navigation buttons
 
 3. Step 3: Build and Deploy
    - show the name of the selected config
@@ -77,6 +79,7 @@ future 4. Step 4: Verify
     - `state.py` - Session state management
   - `tests/` - Isolated test harness (not deployed)
     - `saas_simulation_test.py` - Command line test framework
+    - `syntax_check.py` - Fast AST-based syntax checker for all Streamlit app Python files
     - `run_tests.py` - Test runner
     - `run.sh` - Test execution script
 - **Unified Code**: Both Streamlit app and test framework use the same `core/toolkit_operations.py`
@@ -86,6 +89,7 @@ future 4. Step 4: Verify
 - Minimize UI flicker: prefer containers and forms; only rerun on step change or long op completion.
 - Persist critical state in `st.session_state`; avoid recomputation when navigating back to earlier steps.
 - use verbose debug=true during development
+- UI stability: changing selections (e.g., Step 2 radio) must not wipe other content
 
 ### 5) Acceptance Criteria
 - Switching steps shows no content leakage from other steps.
@@ -107,6 +111,7 @@ future 4. Step 4: Verify
 - **Unified Test Framework**: Command line test framework uses the same `core/toolkit_operations.py` as Streamlit app
 - **SaaS Environment Simulation**: Tests must simulate actual SaaS behavior (downloading to temp directories)
 - **Real Environment Testing**: Tests must use real .env files from ~/envs/ directory
+- **Automated Syntax Check**: `modules/admin/github-repo-deployer/streamlit-shell-tests/syntax_check.py` must pass (no syntax errors in Streamlit app)
 - **Comprehensive Test Coverage**:
   - Environment variable loading and validation
   - GitHub API connection and rate limiting
@@ -129,6 +134,7 @@ future 4. Step 4: Verify
 - **Rate Limiting Protection**: All GitHub API calls use rate limiting with retry logic
 - **Exponential Backoff**: Automatic retry with increasing delays (1s, 2s, 5s, 10s, 30s)
 - **Rate Limit Monitoring**: Real-time rate limit status display in sidebar
+- Provide a "Check GitHub API Status" action in the sidebar to surface remaining/limit/reset
 - Error recovery mechanisms for Cognite SDK operations
 - OAuth2 authentication fallback strategies for browser environment
 - Clear error messages with actionable solutions
@@ -144,6 +150,11 @@ future 4. Step 4: Verify
 - **Success Criteria**: Test framework must pass (100% success rate) before any deployment
 - **File Structure Maintenance**: Keep root directory clean with only essential files
 - **Test Isolation**: Ensure test harness files are isolated in `tests/` folder
+ - **Syntax Discipline**:
+   - Run `syntax_check.py` before each commit and deployment
+   - `st.set_page_config()` must be the first Streamlit call in `main.py` and placed at top-level indentation
+   - Avoid circular imports that can cause `StreamlitSetPageConfigMustBeFirstCommandError`
+   - Maintain consistent indentation; do not mix tabs/spaces
 
 ### 10) Current Implementation Status
 - **✅ Unified Code**: `core/toolkit_operations.py` provides single source of truth for build/deploy
@@ -156,6 +167,7 @@ future 4. Step 4: Verify
 - **✅ Environment Variables**: Real .env file loading and validation
 - **✅ OAuth2 Authentication**: Browser-compatible authentication for CDF
 - **✅ Error Handling**: Comprehensive error handling and recovery mechanisms
+ - **✅ Automated Syntax Checks**: `syntax_check.py` enforces clean syntax across app files
 
 
 Expected output format and level of detail expected for build, dry-run, deploy 
