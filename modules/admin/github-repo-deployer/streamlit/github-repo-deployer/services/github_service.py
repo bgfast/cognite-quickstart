@@ -96,25 +96,25 @@ def render_download_section(repo_owner, repo_name, selected_branch, access_type)
     base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
     bundled_zip = os.path.join(base_dir, "bundled_repo.zip")
     bundled_exists = os.path.exists(bundled_zip)
-    use_bundled = st.checkbox(
-        "Use bundled ZIP (dev fast path)", 
-        value=bundled_exists, 
-        help="If present, uses bundled_repo.zip to skip GitHub download"
-    )
-    if use_bundled:
-        if bundled_exists:
-            st.info("📦 Using bundled_repo.zip to bypass download")
+    local_repo_dir = os.path.join(base_dir, "cognite-quickstart-main")
+    local_repo_exists = os.path.isdir(local_repo_dir)
+    if local_repo_exists:
+        st.info("📂 Using local repo directory for fast iteration")
+        st.session_state['extracted_path'] = local_repo_dir
+        return local_repo_dir
+    if bundled_exists:
+        with st.status("📦 Using bundled_repo.zip", expanded=True) as s:
+            s.write("Extracting bundled ZIP...")
             extracted = extract_zip_to_temp_dir(bundled_zip)
             if extracted:
                 st.session_state['extracted_path'] = extracted
-                st.session_state['dev_use_bundled_zip'] = True
+                s.update(label=f"✅ Extracted to {extracted}", state="complete")
                 st.success("✅ Repository extracted from bundled ZIP")
                 return extracted
             else:
+                s.update(label="❌ Failed to extract bundled ZIP", state="error")
                 st.error("❌ Failed to extract bundled ZIP")
                 return None
-        else:
-            st.warning("⚠️ bundled_repo.zip not found next to main.py. Place it under streamlit/github-repo-deployer/")
     
     # Check if repository is already cached
     from core.cache_manager import is_repository_cached, get_cached_repository, cache_repository, get_cache_stats
@@ -171,8 +171,28 @@ def extract_zip_to_temp_dir(zip_path):
         temp_dir = tempfile.mkdtemp()
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
             zip_ref.extractall(temp_dir)
+
+        # If the ZIP has a single top-level directory, use that as the root
+        try:
+            entries = [e for e in os.listdir(temp_dir) if not e.startswith('__MACOSX')]
+            if len(entries) == 1:
+                candidate = os.path.join(temp_dir, entries[0])
+                if os.path.isdir(candidate):
+                    import logging
+                    logging.getLogger("github_repo_deployer").info(f"Bundled ZIP extracted to single dir {candidate}")
+                    return candidate
+        except Exception:
+            pass
+
+        import logging
+        logging.getLogger("github_repo_deployer").info(f"Bundled ZIP extracted to temp dir {temp_dir}")
         return temp_dir
     except Exception as e:
+        try:
+            import logging
+            logging.getLogger("github_repo_deployer").exception(f"Extract ZIP failed: {e}")
+        except Exception:
+            pass
         st.error(f"Failed to extract ZIP file: {e}")
         return None
 

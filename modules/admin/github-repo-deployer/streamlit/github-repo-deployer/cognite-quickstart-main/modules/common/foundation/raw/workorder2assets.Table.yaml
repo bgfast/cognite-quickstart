@@ -1,0 +1,2 @@
+dbName: wo_{{default_location}}_{{source_workorder}}
+tableName: workorder2assets

@@ -1,0 +1,3 @@
+externalId: wf_live_weather_data_{{ default_location }}
+description: Live weather data transformation for {{ default_location }}
+dataSetExternalId: {{default_location}}_transformation
