@@ -92,6 +92,30 @@ def render_download_section(repo_owner, repo_name, selected_branch, access_type)
     """Render download section and handle repository download with caching"""
     st.header("📥 Download Repository")
     
+    # Fast-iteration path: allow using a bundled ZIP that ships with the app
+    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    bundled_zip = os.path.join(base_dir, "bundled_repo.zip")
+    bundled_exists = os.path.exists(bundled_zip)
+    use_bundled = st.checkbox(
+        "Use bundled ZIP (dev fast path)", 
+        value=bundled_exists, 
+        help="If present, uses bundled_repo.zip to skip GitHub download"
+    )
+    if use_bundled:
+        if bundled_exists:
+            st.info("📦 Using bundled_repo.zip to bypass download")
+            extracted = extract_zip_to_temp_dir(bundled_zip)
+            if extracted:
+                st.session_state['extracted_path'] = extracted
+                st.session_state['dev_use_bundled_zip'] = True
+                st.success("✅ Repository extracted from bundled ZIP")
+                return extracted
+            else:
+                st.error("❌ Failed to extract bundled ZIP")
+                return None
+        else:
+            st.warning("⚠️ bundled_repo.zip not found next to main.py. Place it under streamlit/github-repo-deployer/")
+    
     # Check if repository is already cached
     from core.cache_manager import is_repository_cached, get_cached_repository, cache_repository, get_cache_stats
     
@@ -118,27 +142,12 @@ def render_download_section(repo_owner, repo_name, selected_branch, access_type)
                     st.error("❌ Failed to download repository")
                     return None
         else:
-            # Use cached version
+            # Use cached version directly (return directory path, not a ZIP)
             cached_path = get_cached_repository(repo_owner, repo_name, selected_branch)
             if cached_path:
-                # Create a temporary zip from cached directory
-                import tempfile
-                import zipfile
-                import shutil
-                
-                temp_zip = tempfile.NamedTemporaryFile(suffix='.zip', delete=False)
-                temp_zip.close()
-                
-                with zipfile.ZipFile(temp_zip.name, 'w', zipfile.ZIP_DEFLATED) as zipf:
-                    for root, dirs, files in os.walk(cached_path):
-                        for file in files:
-                            file_path = os.path.join(root, file)
-                            arcname = os.path.relpath(file_path, cached_path)
-                            zipf.write(file_path, arcname)
-                
-                st.session_state['uploaded_zip_path'] = temp_zip.name
+                st.session_state['extracted_path'] = cached_path
                 st.success("✅ Using cached repository!")
-                return temp_zip.name
+                return cached_path
     else:
         # Not cached, download normally
         if st.button("📥 Download Repository", type="primary"):
