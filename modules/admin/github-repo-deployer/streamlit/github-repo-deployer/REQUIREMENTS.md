@@ -32,11 +32,12 @@ This document baselines the expected behavior and structure of the Streamlit app
    - future requirement - download a zip from the current cdf project
 
 2. Step 2: Select Configuration
-   - Render sub-tabs, one per `config.*.yaml` file; show associated README if present.
+   - future - Render sub-tabs, one per `config.*.yaml` file; show associated README if present.
    - Selecting a config sets `st.session_state['selected_config']` and `st.session_state['selected_env']`.
    - step 3 is always enabled because no action is required on step 2. one is selected by default. the user can change it if they want but are not required to
    - Radio selection must not clear or collapse other UI elements; provide immediate visual feedback ("Selected: <file>") and a "Configuration Details" expander
-   - No rerun on radio change; only rerun on navigation buttons
+   - future - No rerun on radio change; only rerun on navigation buttons
+   - for v1 - only display radio choices - one for each config file.
 
 3. Step 3: Build and Deploy
    - show the name of the selected config

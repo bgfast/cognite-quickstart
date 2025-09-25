@@ -30,6 +30,9 @@ def set_selected_config(config: str) -> None:
 def set_selected_env(env: str) -> None:
     st.session_state['selected_env'] = env
 
+def get_selected_env() -> str | None:
+    return st.session_state.get('selected_env')
+
 def reset() -> None:
     for key in ['workflow_step','extracted_path','config_files','env_vars','selected_config','selected_env']:
         if key in st.session_state:
