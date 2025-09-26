@@ -19,7 +19,7 @@ from services import ui_steps
 
 # Set page config first (must be before any other Streamlit commands)
 st.set_page_config(
-    page_title="GitHub Repo to CDF Deployer v1.92",
+    page_title="GitHub Repo to CDF Deployer v1.94",
             page_icon="🚀",
             layout="wide",
     initial_sidebar_state="expanded"
@@ -108,7 +108,7 @@ def main():
 
     st.title("🚀 GitHub Repo to CDF Deployer")
     st.markdown("Download files from public GitHub repositories and deploy them using the Cognite toolkit")
-    st.caption("Version 1.92 - Added debug mode verbose build/deploy logs like shell tests")
+    st.caption("Version 1.94 - Debug output persists across navigation; all tabs always enabled")
     
     # Initialize workflow step
     if 'workflow_step' not in st.session_state:
@@ -126,24 +126,17 @@ def main():
         ("✅ Verify Deployment", "Confirm successful deployment")
     ]
     
-    # Create clickable step indicators
+    # Create always-clickable step indicators
     cols = st.columns(len(steps))
     for i, (step_name, step_desc) in enumerate(steps):
         with cols[i]:
             step_num = i + 1
-            if step_num == st.session_state['workflow_step']:
-                # Current step - highlighted
-                if st.button(f"**Step {step_num}:** {step_name}", key=f"step_{step_num}_current", type="primary"):
-                    st.session_state['workflow_step'] = step_num
-                    st.rerun()
-            elif step_num < st.session_state['workflow_step']:
-                # Completed step - clickable
-                if st.button(f"**Step {step_num}:** {step_name}", key=f"step_{step_num}_completed", help=f"Go back to {step_name}"):
-                    st.session_state['workflow_step'] = step_num
-                    st.rerun()
-            else:
-                # Future step - disabled
-                st.button(f"**Step {step_num}:** {step_name}", key=f"step_{step_num}_future", disabled=True, help=f"Complete previous steps first")
+            is_current = step_num == st.session_state['workflow_step']
+            button_type = "primary" if is_current else "secondary"
+            
+            if st.button(f"**Step {step_num}:** {step_name}", key=f"step_{step_num}", type=button_type, help=step_desc):
+                st.session_state['workflow_step'] = step_num
+                st.rerun()
     
     st.divider()
     

@@ -132,80 +132,182 @@ def render_step_3():
     extracted_path = state.get_extracted_path()
     env_vars = state.get_env_vars() or {}
     
-    if st.button("🔨 Build Package", type="primary"):
-        with st.spinner("Building package..."):
-            selected_env = state.get_selected_env() or "weather"
-            st.info(f"🔨 Building with environment: {selected_env}")
+    # Show previous build results if they exist
+    build_success, build_output, build_error, debug_stdout, debug_stderr = state.get_build_results()
+    if build_success is not None:
+        if build_success:
+            st.success("✅ Build completed successfully (previous run)")
             
-            # Show detailed build logs if debug mode is on
+            # Show debug output if available and debug mode is on
             if st.session_state.get('debug_mode', False):
-                st.subheader("🔍 Build Logs (Debug Mode)")
-                log_container = st.empty()
-                
-                # Use the same verbose logging as shell tests
-                def streamlit_logger(msg):
-                    with log_container.container():
-                        st.text(msg)
-                
-                ok, out, err = toolkit_service.build_project(extracted_path, env_vars, env_name=selected_env)
-            else:
-                ok, out, err = toolkit_service.build_project(extracted_path, env_vars, env_name=selected_env)
+                if debug_stdout:
+                    st.subheader("📄 Previous Build Process Output")
+                    st.code(debug_stdout, language="text")
+                if debug_stderr:
+                    st.subheader("📄 Previous Build Process Errors")
+                    st.code(debug_stderr, language="text")
+                if build_output:
+                    st.subheader("📄 Previous Build Output")
+                    st.code(build_output, language="text")
             
-            if ok:
-                st.success("✅ Build completed successfully")
-                if st.session_state.get('debug_mode', False) and out:
-                    st.subheader("📄 Build Output")
-                    st.code(out, language="text")
-                state.set_workflow_step(4)
-                st.rerun()
-            else:
-                st.error("❌ Build failed")
-                if err:
-                    st.subheader("❌ Build Error")
-                    st.code(err, language="text")
-                if out:
-                    st.subheader("📄 Build Output")
-                    st.code(out, language="text")
+            st.info("🚀 Build complete! Click Step 4 tab above to proceed to deployment.")
+        else:
+            st.error("❌ Previous build failed")
+            
+            # Show debug output if available and debug mode is on
+            if st.session_state.get('debug_mode', False):
+                if debug_stdout:
+                    st.subheader("📄 Previous Build Process Output")
+                    st.code(debug_stdout, language="text")
+                if debug_stderr:
+                    st.subheader("📄 Previous Build Process Errors")
+                    st.code(debug_stderr, language="text")
+            
+            if build_error:
+                st.subheader("❌ Previous Build Error")
+                st.code(build_error, language="text")
+            if build_output:
+                st.subheader("📄 Previous Build Output")
+                st.code(build_output, language="text")
+    
+    if st.button("🔨 Build Package", type="primary"):
+        selected_env = state.get_selected_env() or "weather"
+        st.info(f"🔨 Building with environment: {selected_env}")
+        
+        # Initialize output buffers
+        import io
+        from contextlib import redirect_stdout, redirect_stderr
+        stdout_buffer = io.StringIO()
+        stderr_buffer = io.StringIO()
+        
+        # Always show verbose output in debug mode
+        if st.session_state.get('debug_mode', False):
+            st.subheader("🔍 Build Process (Debug Mode)")
+            
+            try:
+                with redirect_stdout(stdout_buffer), redirect_stderr(stderr_buffer):
+                    ok, out, err = toolkit_service.build_project(extracted_path, env_vars, env_name=selected_env)
+                
+                # Show captured output
+                captured_stdout = stdout_buffer.getvalue()
+                captured_stderr = stderr_buffer.getvalue()
+                
+                if captured_stdout:
+                    st.subheader("📄 Build Process Output")
+                    st.code(captured_stdout, language="text")
+                if captured_stderr:
+                    st.subheader("📄 Build Process Errors")
+                    st.code(captured_stderr, language="text")
+                
+            except Exception as e:
+                st.error(f"❌ Build process failed: {e}")
+                ok, out, err = False, "", str(e)
+        else:
+            # Non-debug mode
+            with st.spinner("Building package..."):
+                ok, out, err = toolkit_service.build_project(extracted_path, env_vars, env_name=selected_env)
+        
+        # Store and show results (including debug output)
+        debug_stdout_val = stdout_buffer.getvalue()
+        debug_stderr_val = stderr_buffer.getvalue()
+        state.set_build_results(ok, out, err, debug_stdout_val, debug_stderr_val)
+        
+        if ok:
+            st.success("✅ Build completed successfully")
+            if out and st.session_state.get('debug_mode', False):
+                st.subheader("📄 Build Output")
+                st.code(out, language="text")
+            
+            st.info("🚀 Build complete! Click Step 4 tab above to proceed to deployment.")
+        else:
+            st.error("❌ Build failed - fix errors and try again")
+            if err:
+                st.subheader("❌ Build Error Details")
+                st.code(err, language="text")
+            if out:
+                st.subheader("📄 Build Output")
+                st.code(out, language="text")
 
 def render_step_4():
     st.subheader("🚀 Step 4: Deploy Package")
     extracted_path = state.get_extracted_path()
     env_vars = state.get_env_vars() or {}
     
+    # Show previous deploy results if they exist
+    deploy_success, deploy_output, deploy_error = state.get_deploy_results()
+    if deploy_success is not None:
+        if deploy_success:
+            st.success("✅ Deployment completed successfully (previous run)")
+            if deploy_output and st.session_state.get('debug_mode', False):
+                st.subheader("📄 Previous Deploy Output")
+                st.code(deploy_output, language="text")
+            st.info("✅ Deploy complete! Click Step 5 tab above to verify deployment.")
+        else:
+            st.error("❌ Previous deployment failed")
+            if deploy_error:
+                st.subheader("❌ Previous Deploy Error")
+                st.code(deploy_error, language="text")
+            if deploy_output:
+                st.subheader("📄 Previous Deploy Output")
+                st.code(deploy_output, language="text")
+    
     if st.button("🚀 Deploy to CDF", type="primary"):
-        with st.spinner("Deploying to CDF..."):
-            selected_env = state.get_selected_env() or "weather"
-            st.info(f"🚀 Deploying with environment: {selected_env}")
+        selected_env = state.get_selected_env() or "weather"
+        st.info(f"🚀 Deploying with environment: {selected_env}")
+        
+        # Always show verbose output in debug mode
+        if st.session_state.get('debug_mode', False):
+            st.subheader("🔍 Deploy Process (Debug Mode)")
             
-            # Show detailed deploy logs if debug mode is on
-            if st.session_state.get('debug_mode', False):
-                st.subheader("🔍 Deploy Logs (Debug Mode)")
-                log_container = st.empty()
-                
-                # Use the same verbose logging as shell tests
-                def streamlit_logger(msg):
-                    with log_container.container():
-                        st.text(msg)
-                
-                ok, out, err = toolkit_service.deploy_project(extracted_path, env_vars, env_name=selected_env)
-            else:
-                ok, out, err = toolkit_service.deploy_project(extracted_path, env_vars, env_name=selected_env)
+            # Capture verbose logging
+            import io
+            from contextlib import redirect_stdout, redirect_stderr
             
-            if ok:
-                st.success("✅ Deployment completed successfully")
-                if st.session_state.get('debug_mode', False) and out:
-                    st.subheader("📄 Deploy Output")
-                    st.code(out, language="text")
-                state.set_workflow_step(5)
-                st.rerun()
-            else:
-                st.error("❌ Deployment failed")
-                if err:
-                    st.subheader("❌ Deploy Error")
-                    st.code(err, language="text")
-                if out:
-                    st.subheader("📄 Deploy Output")
-                    st.code(out, language="text")
+            # Create string buffers to capture output
+            stdout_buffer = io.StringIO()
+            stderr_buffer = io.StringIO()
+            
+            try:
+                with redirect_stdout(stdout_buffer), redirect_stderr(stderr_buffer):
+                    ok, out, err = toolkit_service.deploy_project(extracted_path, env_vars, env_name=selected_env)
+                
+                # Show captured output
+                captured_stdout = stdout_buffer.getvalue()
+                captured_stderr = stderr_buffer.getvalue()
+                
+                if captured_stdout:
+                    st.subheader("📄 Deploy Process Output")
+                    st.code(captured_stdout, language="text")
+                if captured_stderr:
+                    st.subheader("📄 Deploy Process Errors")
+                    st.code(captured_stderr, language="text")
+                
+            except Exception as e:
+                st.error(f"❌ Deploy process failed: {e}")
+                ok, out, err = False, "", str(e)
+        else:
+            # Non-debug mode
+            with st.spinner("Deploying to CDF..."):
+                ok, out, err = toolkit_service.deploy_project(extracted_path, env_vars, env_name=selected_env)
+        
+        # Store and show results
+        state.set_deploy_results(ok, out, err)
+        
+        if ok:
+            st.success("✅ Deployment completed successfully")
+            if out and st.session_state.get('debug_mode', False):
+                st.subheader("📄 Deploy Output")
+                st.code(out, language="text")
+            
+            st.info("✅ Deploy complete! Click Step 5 tab above to verify deployment.")
+        else:
+            st.error("❌ Deployment failed - fix errors and try again")
+            if err:
+                st.subheader("❌ Deploy Error Details")
+                st.code(err, language="text")
+            if out:
+                st.subheader("📄 Deploy Output")
+                st.code(out, language="text")
 
 def render_step_5():
     st.subheader("✅ Step 5: Deployment Complete")

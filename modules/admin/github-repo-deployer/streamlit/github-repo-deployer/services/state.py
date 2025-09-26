@@ -33,6 +33,34 @@ def set_selected_env(env: str) -> None:
 def get_selected_env() -> str | None:
     return st.session_state.get('selected_env')
 
+def set_build_results(success: bool, output: str, error: str, debug_stdout: str = '', debug_stderr: str = '') -> None:
+    st.session_state['build_success'] = success
+    st.session_state['build_output'] = output
+    st.session_state['build_error'] = error
+    st.session_state['build_debug_stdout'] = debug_stdout
+    st.session_state['build_debug_stderr'] = debug_stderr
+
+def get_build_results() -> tuple[bool | None, str, str, str, str]:
+    return (
+        st.session_state.get('build_success'),
+        st.session_state.get('build_output', ''),
+        st.session_state.get('build_error', ''),
+        st.session_state.get('build_debug_stdout', ''),
+        st.session_state.get('build_debug_stderr', '')
+    )
+
+def set_deploy_results(success: bool, output: str, error: str) -> None:
+    st.session_state['deploy_success'] = success
+    st.session_state['deploy_output'] = output
+    st.session_state['deploy_error'] = error
+
+def get_deploy_results() -> tuple[bool | None, str, str]:
+    return (
+        st.session_state.get('deploy_success'),
+        st.session_state.get('deploy_output', ''),
+        st.session_state.get('deploy_error', '')
+    )
+
 def reset() -> None:
     for key in ['workflow_step','extracted_path','config_files','env_vars','selected_config','selected_env']:
         if key in st.session_state:
