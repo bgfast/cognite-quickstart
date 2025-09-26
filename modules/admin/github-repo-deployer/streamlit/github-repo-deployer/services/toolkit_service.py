@@ -52,10 +52,15 @@ class ToolkitService:
     def build_project(self, project_path: str, env_vars: Dict[str, str] = None, env_name: str = "weather") -> Tuple[bool, str, str]:
         """Build project using unified core operations (same as test framework)"""
         try:
+            # Merge environment variables with loaded env file
+            merged_env_vars = os.environ.copy()
+            if env_vars:
+                merged_env_vars.update(env_vars)
+            
             # Use unified build function with verbose logging
             success, output, error = build_project(
                 project_path, 
-                env_vars, 
+                merged_env_vars, 
                 env_name=env_name,
                 verbose=True,
                 logger=st.info
@@ -75,10 +80,20 @@ class ToolkitService:
     def deploy_project(self, project_path: str, env_vars: Dict[str, str] = None, env_name: str = "weather") -> Tuple[bool, str, str]:
         """Deploy project using unified core operations (same as test framework)"""
         try:
+            # Merge environment variables with loaded env file
+            merged_env_vars = os.environ.copy()
+            if env_vars:
+                merged_env_vars.update(env_vars)
+            
+            # Debug: show what OAuth2 vars we have
+            oauth_vars = ['IDP_CLIENT_ID', 'IDP_CLIENT_SECRET', 'IDP_TOKEN_URL']
+            available_oauth = {var: bool(merged_env_vars.get(var)) for var in oauth_vars}
+            st.info(f"🔐 OAuth2 credentials check: {available_oauth}")
+            
             # Use unified deploy function with verbose logging
             success, output, error = deploy_project(
                 project_path, 
-                env_vars, 
+                merged_env_vars, 
                 env_name=env_name,
                 verbose=True,
                 logger=st.info

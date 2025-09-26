@@ -255,6 +255,15 @@ def render_step_4():
         selected_env = state.get_selected_env() or "weather"
         st.info(f"🚀 Deploying with environment: {selected_env}")
         
+        # Debug environment variables
+        if st.session_state.get('debug_mode', False):
+            oauth_vars = ['IDP_CLIENT_ID', 'IDP_CLIENT_SECRET', 'IDP_TOKEN_URL']
+            available_oauth = {var: bool(os.environ.get(var)) for var in oauth_vars}
+            st.info(f"🔐 Environment OAuth2 check: {available_oauth}")
+            
+            env_vars_check = {var: bool(env_vars.get(var)) if env_vars else False for var in oauth_vars}
+            st.info(f"🔐 Passed env_vars OAuth2 check: {env_vars_check}")
+        
         # Always show verbose output in debug mode
         if st.session_state.get('debug_mode', False):
             st.subheader("🔍 Deploy Process (Debug Mode)")

@@ -69,11 +69,39 @@ def initialize_cdf_client():
     global CLIENT, IS_LOCAL_ENV
     
     try:
-        # Try to initialize CDF client
-        CLIENT = CogniteClient()
-        IS_LOCAL_ENV = False
-        st.success("✅ Connected to CDF")
-        log_debug("CDF client initialized successfully")
+        # Check if we have the required OAuth2 credentials
+        required_vars = ['CDF_PROJECT', 'CDF_CLUSTER', 'IDP_CLIENT_ID', 'IDP_CLIENT_SECRET', 'IDP_TOKEN_URL']
+        missing_vars = [var for var in required_vars if not os.environ.get(var)]
+        
+        if missing_vars:
+            CLIENT = None
+            IS_LOCAL_ENV = True
+            log_debug(f"Missing OAuth2 credentials: {missing_vars}")
+            if st.session_state.get('debug_mode', False):
+                st.warning(f"⚠️ Missing OAuth2 credentials: {missing_vars}")
+        else:
+            # Try to initialize CDF client with OAuth2
+            from cognite.client import CogniteClient, ClientConfig
+            from cognite.client.credentials import OAuthClientCredentials
+            
+            config = ClientConfig(
+                client_name="streamlit-github-deployer",
+                base_url=f"https://{os.environ['CDF_CLUSTER']}.cognitedata.com",
+                project=os.environ['CDF_PROJECT'],
+                credentials=OAuthClientCredentials(
+                    token_url=os.environ['IDP_TOKEN_URL'],
+                    client_id=os.environ['IDP_CLIENT_ID'],
+                    client_secret=os.environ['IDP_CLIENT_SECRET'],
+                    scopes=[f"https://{os.environ['CDF_CLUSTER']}.cognitedata.com/.default"]
+                )
+            )
+            
+            CLIENT = CogniteClient(config)
+            IS_LOCAL_ENV = False
+            log_debug("CDF client initialized successfully with OAuth2")
+            if st.session_state.get('debug_mode', False):
+                st.success("✅ Connected to CDF with OAuth2")
+                
     except Exception as e:
         CLIENT = None
         IS_LOCAL_ENV = True
