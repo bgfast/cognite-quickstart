@@ -134,15 +134,38 @@ def render_step_3():
     
     if st.button("🔨 Build Package", type="primary"):
         with st.spinner("Building package..."):
-            ok, out, err = toolkit_service.build_project(extracted_path, env_vars, env_name=state.get_selected_env() or "weather")
+            selected_env = state.get_selected_env() or "weather"
+            st.info(f"🔨 Building with environment: {selected_env}")
+            
+            # Show detailed build logs if debug mode is on
+            if st.session_state.get('debug_mode', False):
+                st.subheader("🔍 Build Logs (Debug Mode)")
+                log_container = st.empty()
+                
+                # Use the same verbose logging as shell tests
+                def streamlit_logger(msg):
+                    with log_container.container():
+                        st.text(msg)
+                
+                ok, out, err = toolkit_service.build_project(extracted_path, env_vars, env_name=selected_env)
+            else:
+                ok, out, err = toolkit_service.build_project(extracted_path, env_vars, env_name=selected_env)
+            
             if ok:
                 st.success("✅ Build completed successfully")
+                if st.session_state.get('debug_mode', False) and out:
+                    st.subheader("📄 Build Output")
+                    st.code(out, language="text")
                 state.set_workflow_step(4)
                 st.rerun()
             else:
                 st.error("❌ Build failed")
                 if err:
+                    st.subheader("❌ Build Error")
                     st.code(err, language="text")
+                if out:
+                    st.subheader("📄 Build Output")
+                    st.code(out, language="text")
 
 def render_step_4():
     st.subheader("🚀 Step 4: Deploy Package")
@@ -151,15 +174,38 @@ def render_step_4():
     
     if st.button("🚀 Deploy to CDF", type="primary"):
         with st.spinner("Deploying to CDF..."):
-            ok, out, err = toolkit_service.deploy_project(extracted_path, env_vars, env_name=state.get_selected_env() or "weather")
+            selected_env = state.get_selected_env() or "weather"
+            st.info(f"🚀 Deploying with environment: {selected_env}")
+            
+            # Show detailed deploy logs if debug mode is on
+            if st.session_state.get('debug_mode', False):
+                st.subheader("🔍 Deploy Logs (Debug Mode)")
+                log_container = st.empty()
+                
+                # Use the same verbose logging as shell tests
+                def streamlit_logger(msg):
+                    with log_container.container():
+                        st.text(msg)
+                
+                ok, out, err = toolkit_service.deploy_project(extracted_path, env_vars, env_name=selected_env)
+            else:
+                ok, out, err = toolkit_service.deploy_project(extracted_path, env_vars, env_name=selected_env)
+            
             if ok:
                 st.success("✅ Deployment completed successfully")
+                if st.session_state.get('debug_mode', False) and out:
+                    st.subheader("📄 Deploy Output")
+                    st.code(out, language="text")
                 state.set_workflow_step(5)
                 st.rerun()
             else:
                 st.error("❌ Deployment failed")
                 if err:
+                    st.subheader("❌ Deploy Error")
                     st.code(err, language="text")
+                if out:
+                    st.subheader("📄 Deploy Output")
+                    st.code(out, language="text")
 
 def render_step_5():
     st.subheader("✅ Step 5: Deployment Complete")
