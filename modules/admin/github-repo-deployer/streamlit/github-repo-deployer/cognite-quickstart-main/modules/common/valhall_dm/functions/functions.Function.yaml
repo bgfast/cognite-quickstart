@@ -1,0 +1,11 @@
+- name: Valhall Datapoints - OID Sync - DM
+  externalId: oid_dp_sync-dm
+  owner: Field Engineering
+  description: Extracts Datapoints from publicdata CDF - data modeling
+  cpu: 1.0
+  memory: 1.5
+  metadata:
+    version: "1.0"
+    example_input: '{"startTime": 1529035200000, "endTime": 1529553600000}'
+  runtime: py311
+  functionPath: handler.py

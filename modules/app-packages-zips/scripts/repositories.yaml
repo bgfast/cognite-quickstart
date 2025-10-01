@@ -1,0 +1,15 @@
+# Simple list of GitHub repository URLs to download
+repositories:
+  - url: "https://github.com/cognitedata/library/archive/refs/heads/added/pattern-mode-beta.zip"
+    name: "cognite-library-pattern-mode-beta"
+    
+  - url: "https://github.com/bgfast/cognite-quickstart/archive/refs/heads/main.zip"
+    name: "cognite-quickstart-main"
+    
+  - url: "https://github.com/cognitedata/cognite-samples/archive/refs/heads/main.zip"
+    name: "cognite-samples-main"
+
+# Configuration
+config:
+  keep_versions: 5
+  cleanup_older_than_days: 30

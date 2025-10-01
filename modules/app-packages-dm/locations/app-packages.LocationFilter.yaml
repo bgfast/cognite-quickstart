@@ -1,0 +1,11 @@
+externalId: app-packages
+name: 'app-packages'
+description: 'App packages data modeling and file storage'
+dataModels:
+  - externalId: CogniteCore
+    space: cdf_cdm
+    version: v1
+instanceSpaces:
+  - app-packages
+dataModelingType: DATA_MODELING_ONLY
+

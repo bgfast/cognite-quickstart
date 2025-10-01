@@ -1,0 +1,11 @@
+[module]
+title = "GitHub Repo to CDF Deployer"
+description = "Streamlit application for downloading and deploying GitHub repositories using the Cognite toolkit"
+
+[packages]
+tags = [
+    "streamlit",
+    "deployment",
+    "github",
+    "toolkit",
+]

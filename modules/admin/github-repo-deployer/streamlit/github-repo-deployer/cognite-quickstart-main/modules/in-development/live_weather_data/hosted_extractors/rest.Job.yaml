@@ -1,0 +1,12 @@
+externalId: {{ default_location }}_rest_job
+sourceId: {{ default_location }}_rest_source
+destinationId: {{ default_location }}_rest_destination
+format:
+  type: custom
+  encoding: utf8
+  mappingId: {{ default_location }}_rest_mapping
+config:
+  interval: 1h
+  path: /v1/meteofrance
+  method: get
+  query: {"latitude": "56.2758","longitude": "3.39381","hourly": "temperature_2m","past_days": "90"}
