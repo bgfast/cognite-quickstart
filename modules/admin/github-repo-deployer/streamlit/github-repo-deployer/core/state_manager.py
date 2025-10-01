@@ -157,3 +157,4 @@ class StateManager:
 
 # Global state manager instance
 state_manager = StateManager()
+

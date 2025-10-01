@@ -278,7 +278,8 @@ def render_step_4():
             
             try:
                 with redirect_stdout(stdout_buffer), redirect_stderr(stderr_buffer):
-                    ok, out, err = toolkit_service.deploy_project(extracted_path, env_vars, env_name=selected_env)
+                    # Always pass None for env_vars so toolkit service uses merged os.environ
+                    ok, out, err = toolkit_service.deploy_project(extracted_path, None, env_name=selected_env)
                 
                 # Show captured output
                 captured_stdout = stdout_buffer.getvalue()
@@ -294,10 +295,11 @@ def render_step_4():
             except Exception as e:
                 st.error(f"❌ Deploy process failed: {e}")
                 ok, out, err = False, "", str(e)
-        else:
-            # Non-debug mode
-            with st.spinner("Deploying to CDF..."):
-                ok, out, err = toolkit_service.deploy_project(extracted_path, env_vars, env_name=selected_env)
+            else:
+                # Non-debug mode
+                with st.spinner("Deploying to CDF..."):
+                    # Always pass None for env_vars so toolkit service uses merged os.environ
+                    ok, out, err = toolkit_service.deploy_project(extracted_path, None, env_name=selected_env)
         
         # Store and show results
         state.set_deploy_results(ok, out, err)

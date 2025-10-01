@@ -340,22 +340,139 @@ success, output, error = deploy_project(project_path, env_vars, env_name=env_nam
 - **🔮 Batch Operations**: Support for multiple repository operations
 - **🔮 Custom Templates**: Support for custom deployment templates
 
-### 13.5 Current vs Future Download Methods
+### 13.5 Enhanced Download Methods Architecture
 - **Current (GitHub)**: Individual file download via GitHub API → direct directory caching
-- **Future (CDF)**: ZIP file download from CDF → extract using `extract_zip_to_temp_dir()` → directory
-- **Future Choice**: Users will be able to choose between CDF zip download or Git repo download
-- **ZIP Logic**: Kept `extract_zip_to_temp_dir()` function for future CDF zip download feature
+- **New (CDF Zip)**: ZIP file download from CDF Files API → extract using `extract_zip_to_temp_dir()` → directory
+- **Dual Source Support**: Users can choose between GitHub repo or CDF zip file download
+- **ZIP Logic**: Enhanced `extract_zip_to_temp_dir()` function for CDF zip download feature
 
-### 13.6 Future Download Source Selection
+### 13.6 CDF Zip File Management System
+- **New Module Required**: `zip-file-uploader` module for managing repository zip files in CDF
+- **CDF Space**: Dedicated Cognite space `github-repo-zips` for storing repository zip files
+- **Upload Script**: Automated script to download GitHub repos as zip files and upload to CDF
+- **Repository Catalog**: Maintain list of supported GitHub repositories for zip file generation
+- **Version Management**: Track zip file versions and update timestamps in CDF
+
+### 13.7 Download Source Selection (Enhanced)
 - **Step 1 Enhancement**: Add radio button to choose download source:
-  - 🔗 **GitHub Repository**: Current individual file download approach
-  - 📦 **CDF Zip File**: Future ZIP download and extraction approach
+  - 🔗 **GitHub Repository**: Direct API download (current approach)
+  - 📦 **CDF Zip File**: Download pre-packaged zip from CDF Files API
 - **Unified Workflow**: Both sources lead to the same Step 2 (Configuration Selection)
 - **Source Detection**: Automatically detect source type and use appropriate download method
+- **Fallback Logic**: If CDF zip unavailable, fallback to GitHub API download
 
-## 14. Quality Assurance Checklist
+## 14. Zip File Uploader Module Requirements
 
-### 14.1 Pre-Deployment Checklist
+### 14.1 Module Overview
+- **Module Name**: `zip-file-uploader`
+- **Purpose**: Download GitHub repositories as zip files and upload them to CDF for offline access
+- **Location**: `modules/admin/zip-file-uploader/`
+- **CDF Space**: `github-repo-zips` (dedicated space for repository zip files)
+
+### 14.2 Repository Catalog Management
+- **Catalog File**: `repository-catalog.yaml` - List of GitHub repositories to process
+- **Repository Entry Format**:
+  ```yaml
+  repositories:
+    - owner: "cognitedata"
+      repo: "cognite-samples"
+      branches: ["main", "develop"]
+      description: "Official Cognite samples repository"
+    - owner: "bgfast"
+      repo: "cognite-quickstart"
+      branches: ["main"]
+      description: "Cognite quickstart templates"
+  ```
+- **Metadata Tracking**: Track last update, file size, download count per repository
+
+### 14.3 Upload Script Requirements
+- **Script Name**: `upload_repos_to_cdf.py`
+- **Functionality**:
+  - Read repository catalog from `repository-catalog.yaml`
+  - Download each repository as zip file using GitHub API
+  - Upload zip files to CDF Files API in `github-repo-zips` space
+  - Update metadata with timestamps and file information
+  - Handle rate limiting and error recovery
+  - Support incremental updates (only download if changed)
+- **Naming Convention**: `{owner}-{repo}-{branch}-{timestamp}.zip`
+- **Metadata Fields**: owner, repo, branch, download_date, file_size, sha, description
+
+### 14.4 CDF Integration Requirements
+- **Files API**: Use CDF Files API for zip file storage and retrieval
+- **Space Management**: Create and manage `github-repo-zips` space
+- **File Metadata**: Store repository information as file metadata
+- **Access Control**: Ensure proper read/write permissions for the space
+- **File Lifecycle**: Implement cleanup for old zip file versions
+
+### 14.5 Streamlit Integration
+- **Download Source Selection**: Add radio button in Step 1 for GitHub vs CDF zip
+- **CDF File Browser**: List available zip files from CDF when CDF source selected
+- **File Download**: Use CDF Files API to download selected zip file
+- **Extraction**: Use existing `extract_zip_to_temp_dir()` function
+- **Fallback Logic**: If CDF zip unavailable or fails, fallback to GitHub API
+
+### 14.6 Deployment Architecture
+```
+modules/admin/zip-file-uploader/
+├── module.toml                    # Module configuration
+├── README.md                      # Module documentation
+├── repository-catalog.yaml        # List of repositories to process
+├── scripts/
+│   ├── upload_repos_to_cdf.py    # Main upload script
+│   └── update_catalog.py         # Catalog management script
+├── data_sets/
+│   └── github-repo-zips.DataSet.yaml  # Dataset for zip files
+└── spaces/
+    └── github-repo-zips.Space.yaml    # Space definition
+```
+
+### 14.7 Automation Requirements
+- **Scheduled Execution**: Run upload script on schedule (daily/weekly)
+- **CI/CD Integration**: Trigger uploads when repositories are updated
+- **Monitoring**: Log upload success/failure and file statistics
+- **Alerting**: Notify on upload failures or space quota issues
+- **Health Checks**: Verify zip file integrity and accessibility
+
+### 14.8 Testing Requirements
+- **Upload Test**: Verify script can download and upload zip files
+- **Download Test**: Verify Streamlit can retrieve and extract CDF zip files
+- **Fallback Test**: Verify fallback to GitHub API when CDF unavailable
+- **Performance Test**: Compare download speeds between GitHub API and CDF
+- **Integration Test**: End-to-end test of zip file workflow
+
+## 15. Implementation Priorities
+
+### 15.1 Phase 1: Zip File Uploader Module (High Priority)
+- **🔄 Create Module Structure**: Set up `modules/admin/zip-file-uploader/` with proper module.toml
+- **🔄 Repository Catalog**: Create `repository-catalog.yaml` with initial repository list
+- **🔄 Upload Script**: Implement `upload_repos_to_cdf.py` for downloading and uploading zip files
+- **🔄 CDF Space Setup**: Create `github-repo-zips` space and dataset definitions
+- **🔄 Testing**: Verify upload script works with real repositories and CDF
+
+### 15.2 Phase 2: Streamlit Integration (Medium Priority)
+- **📋 Download Source Selection**: Add radio button for GitHub vs CDF zip selection
+- **📋 CDF File Browser**: List available zip files from CDF Files API
+- **📋 CDF Download Logic**: Implement zip file download from CDF
+- **📋 Fallback Implementation**: Add fallback to GitHub API when CDF unavailable
+- **📋 UI Enhancement**: Update Step 1 interface for dual source support
+
+### 15.3 Phase 3: Automation & Monitoring (Low Priority)
+- **📋 Scheduled Updates**: Implement automated repository zip file updates
+- **📋 Monitoring Dashboard**: Track upload success rates and file statistics
+- **📋 Health Checks**: Verify zip file integrity and accessibility
+- **📋 Performance Optimization**: Compare and optimize download speeds
+
+### 15.4 Current Implementation Status
+- **✅ GitHub API Download**: Working with rate limiting and caching
+- **✅ Unified Architecture**: Core toolkit operations implemented
+- **✅ Test Framework**: Comprehensive testing with 100% success rate
+- **🔄 CDF Zip Support**: Ready for implementation (extract function exists)
+- **📋 Zip Uploader Module**: Not yet implemented
+- **📋 Dual Source UI**: Not yet implemented
+
+## 16. Quality Assurance Checklist
+
+### 16.1 Pre-Deployment Checklist
 - [ ] All tests pass in test framework
 - [ ] No circular imports or module errors
 - [ ] Version number incremented
@@ -363,38 +480,55 @@ success, output, error = deploy_project(project_path, env_vars, env_name=env_nam
 - [ ] All imports work correctly
 - [ ] File structure is clean and organized
 
-### 14.2 Post-Deployment Verification
+### 16.2 Post-Deployment Verification
 - [ ] Streamlit app loads without errors
 - [ ] All workflow steps function correctly
 - [ ] GitHub download works with rate limiting
 - [ ] Build and deploy operations work correctly
 - [ ] Verbose logging displays properly
 - [ ] Error handling works as expected
+- [ ] CDF zip file download and extraction works
+- [ ] Fallback to GitHub API functions correctly
 
-### 14.3 Maintenance Tasks
+### 16.3 Zip File Uploader Module Checklist
+- [ ] Module structure created with proper module.toml
+- [ ] Repository catalog configured with target repositories
+- [ ] Upload script successfully downloads and uploads zip files
+- [ ] CDF space and dataset properly configured
+- [ ] File metadata correctly stored in CDF
+- [ ] Automated updates working on schedule
+
+### 16.4 Maintenance Tasks
 - [ ] Regular test framework execution
 - [ ] Monitor GitHub API rate limits
 - [ ] Update dependencies as needed
 - [ ] Clean up temporary files and caches
 - [ ] Review and update documentation
+- [ ] Monitor CDF zip file storage usage
+- [ ] Update repository catalog as needed
 
-## 15. Troubleshooting Guide
+## 17. Troubleshooting Guide
 
-### 15.1 Common Issues
+### 17.1 Common Issues
 - **Import Errors**: Check `__init__.py` files and import paths
 - **Circular Imports**: Use direct function calls instead of imports
 - **Module Not Found**: Verify file structure and Python path
 - **Rate Limiting**: Implement delays and retry logic
 - **Authentication**: Verify OAuth2 credentials and CDF connectivity
+- **CDF Zip Download**: Check CDF Files API connectivity and file permissions
+- **Space Access**: Verify access to `github-repo-zips` space
 
-### 15.2 Debug Mode
+### 17.2 Debug Mode
 - **Verbose Logging**: Enable detailed logging for troubleshooting
 - **Error Messages**: Provide clear, actionable error messages
 - **Stack Traces**: Include relevant stack trace information
 - **Environment Info**: Log environment variables and system information
+- **CDF File Metadata**: Log zip file metadata and download status
 
-### 15.3 Recovery Procedures
+### 17.3 Recovery Procedures
 - **Git Reset**: Use git to restore from known working states
 - **Cache Clear**: Clear repository cache to force fresh downloads
 - **Environment Reset**: Reload environment variables and restart
 - **Service Restart**: Restart Streamlit service if needed
+- **CDF Fallback**: Use GitHub API when CDF zip files unavailable
+- **Zip Re-upload**: Re-run upload script to refresh CDF zip files

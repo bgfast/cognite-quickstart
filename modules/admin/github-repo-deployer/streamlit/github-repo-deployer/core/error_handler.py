@@ -108,3 +108,4 @@ class ErrorHandler:
 
 # Global error handler instance
 error_handler = ErrorHandler()
+

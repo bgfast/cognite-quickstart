@@ -237,3 +237,4 @@ def is_repository_cached(owner: str, repo: str, branch: str) -> bool:
 def get_cache_stats() -> Dict[str, Any]:
     """Get cache statistics using global cache instance"""
     return get_cache().get_cache_stats()
+
