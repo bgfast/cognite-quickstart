@@ -1,0 +1,10 @@
+[module]
+title = "App Packages Zip Files"
+
+[packages]
+tags = [
+    "app-packages",
+    "files",
+    "zip-storage",
+    "admin",
+]
