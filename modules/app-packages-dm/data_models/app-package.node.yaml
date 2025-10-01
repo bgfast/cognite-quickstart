@@ -1,0 +1,12 @@
+- space: app-packages
+  externalId: app-package
+  instanceType: node
+  sources:
+    - source:
+        space: cdf_cdm
+        externalId: CogniteFile
+        version: v1
+        type: view
+      properties:
+        name: 'Application Package'
+        description: 'A packaged application or code repository stored as a zip file'

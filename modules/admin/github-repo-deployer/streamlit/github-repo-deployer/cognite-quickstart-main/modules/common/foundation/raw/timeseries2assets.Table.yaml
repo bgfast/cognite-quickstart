@@ -1,0 +1,2 @@
+dbName: ts_{{default_location}}_{{source_files}}
+tableName: timeseries2assets

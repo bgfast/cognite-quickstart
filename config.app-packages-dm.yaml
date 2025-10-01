@@ -1,0 +1,52 @@
+environment:
+  name: bgfast
+  project: bgfast
+  type: dev
+  selected:
+
+  - modules/app-packages-dm 
+
+variables:
+  # Environment Configuration
+  default_location: valhall                  # Name of the location
+  source_asset: workmate                     # Source of the assets
+  source_event: workmate                     # Source of the events
+  source_workorder: workmate                 # Source of the workorders
+  source_files: fileshare                    # Source of the files
+  source_timeseries: pi                      # Source of the timeseries
+  source_simulated: simulate                 # Source for simulated data
+  
+  # Data Model Configuration
+  company_process_industries_extensions: nordic_data_solutions_data  # Name of the space for custom data model
+  company_process_industries_extensions_external_id: NordicDataSolutions # Name of the custom data model
+  company_process_industries_extensions_external_id_destination: NordicDataSolutions  # Cognite if CDM or IDM, NordicDataSolutions if extension
+  
+  # Authentication Configuration
+  superuser_sourceid: ${SUPERUSER_SOURCEID_ENV} # Source id for the super users in auth
+  my_user_identifier: ${USER_IDENTIFIER}     # User identifier for custom_access_management
+  readwrite_source_id: ${SUPERUSER_SOURCEID_ENV}
+
+  # CDF Configuration (populated from .env file)
+  CDF_PROJECT: ${CDF_PROJECT}
+  CDF_CLUSTER: ${CDF_CLUSTER}
+  CDF_URL: https://${CDF_CLUSTER}.cognitedata.com
+  
+  # IDP Configuration
+  IDP_CLIENT_ID: ${IDP_CLIENT_ID}
+  IDP_CLIENT_SECRET: ${IDP_CLIENT_SECRET}
+  IDP_SCOPES: ${IDP_SCOPES}
+  IDP_TENANT_ID: ${IDP_TENANT_ID}
+  IDP_TOKEN_URL: ${IDP_TOKEN_URL}
+  
+  # Function Configuration
+  function_clientId: ${FUNCTION_CLIENT_ID}
+  function_clientSecret: ${FUNCTION_CLIENT_SECRET}
+  transformation_clientId: ${TRANSFORMATION_CLIENT_ID}
+  transformation_clientSecret: ${TRANSFORMATION_CLIENT_SECRET}
+  
+  # Public Data Configuration
+  tenant-id-pd: ${TENANT_PUBLICDATA}
+  client-id-pd: ${CLI_ID_PUBLICDATA}
+  cli-secret-pd: ${CLI_SECRET_PUBLICDATA}
+  base-url-pd: https://${CLUSTER_PUBLICDATA}.cognitedata.com
+
