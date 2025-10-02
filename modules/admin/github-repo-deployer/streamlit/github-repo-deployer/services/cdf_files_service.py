@@ -18,32 +18,30 @@ def get_available_zip_files() -> List[Dict]:
         return []
     
     try:
-        # Search for zip files - try multiple approaches
+        # Search for all zip files in CDF with multiple approaches
         zip_files_found = []
         
-        # Approach 1: Search by mime type
-        try:
-            files = CLIENT.files.list(mime_type="application/zip", limit=100)
-            zip_files_found.extend(files)
-        except:
-            pass
+        # Approach 1: Get all files and filter for zip files
+        all_files = CLIENT.files.list(limit=2000)  # Increase limit
+        zip_files_found = [f for f in all_files if f.name.endswith('.zip')]
         
-        # Approach 2: Search by name pattern if approach 1 fails
-        if not zip_files_found:
-            try:
-                files = CLIENT.files.list(name="*.zip", limit=100)
-                zip_files_found.extend(files)
-            except:
-                pass
+        # If we still don't find our expected files, try searching for them specifically
+        expected_files = ['cognite-library-pattern-mode-beta.zip', 'cognite-quickstart-main.zip', 'cognite-samples-main.zip']
+        found_names = [f.name for f in zip_files_found]
+        missing_files = [name for name in expected_files if name not in found_names]
         
-        # Approach 3: Search in app-packages space if available
-        if not zip_files_found:
-            try:
-                # This might not work if spaces aren't supported in files.list
-                files = CLIENT.files.list(limit=100)
-                zip_files_found = [f for f in files if f.name.endswith('.zip')]
-            except:
-                pass
+        if missing_files:
+            st.warning(f"⚠️ Expected files not found in first search: {missing_files}")
+            st.info("🔍 Trying alternative search methods...")
+            
+            # Try searching with different parameters
+            for missing_file in missing_files:
+                try:
+                    # Try to find by name pattern
+                    search_results = CLIENT.files.list(name=missing_file, limit=10)
+                    zip_files_found.extend([f for f in search_results if f.name == missing_file])
+                except:
+                    pass
         
         zip_files = []
         for file in zip_files_found:
@@ -57,9 +55,10 @@ def get_available_zip_files() -> List[Dict]:
                     'external_id': file.external_id,
                     'name': file.name,
                     'repo_name': repo_name,
-                    'size': file.size,
                     'uploaded_time': file.uploaded_time,
-                    'metadata': file.metadata or {}
+                    'metadata': file.metadata or {},
+                    'mime_type': file.mime_type,
+                    'uploaded': file.uploaded
                 })
         
         return sorted(zip_files, key=lambda x: x['uploaded_time'], reverse=True)
@@ -88,9 +87,8 @@ def render_cdf_zip_selection() -> Optional[Dict]:
     # Create selection options
     options = []
     for zf in zip_files:
-        size_mb = zf['size'] / (1024 * 1024)
         upload_date = zf['uploaded_time'].strftime('%Y-%m-%d %H:%M')
-        option_text = f"{zf['repo_name']} ({size_mb:.1f}MB, uploaded {upload_date})"
+        option_text = f"{zf['repo_name']} (uploaded {upload_date})"
         options.append(option_text)
     
     selected_idx = st.selectbox(
@@ -106,9 +104,10 @@ def render_cdf_zip_selection() -> Optional[Dict]:
         # Show file details
         with st.expander("📋 File Details"):
             st.write(f"**Name**: {selected_file['name']}")
-            st.write(f"**Size**: {selected_file['size']:,} bytes ({selected_file['size']/(1024*1024):.1f} MB)")
+            st.write(f"**MIME Type**: {selected_file['mime_type']}")
             st.write(f"**Uploaded**: {selected_file['uploaded_time']}")
             st.write(f"**External ID**: {selected_file['external_id']}")
+            st.write(f"**File ID**: {selected_file['id']}")
             
             if selected_file['metadata']:
                 st.write("**Metadata**:")
