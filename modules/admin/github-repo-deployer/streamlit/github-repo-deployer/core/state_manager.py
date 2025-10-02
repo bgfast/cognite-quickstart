@@ -19,7 +19,7 @@ class WorkflowState:
     repo_owner: Optional[str] = None
     repo_name: Optional[str] = None
     selected_branch: str = "main"
-    debug_mode: bool = False
+    debug_mode: bool = True  # Default to True for development
     
     def validate(self) -> bool:
         """Validate state consistency"""
