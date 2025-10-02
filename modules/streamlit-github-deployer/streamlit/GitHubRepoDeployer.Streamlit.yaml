@@ -1,0 +1,8 @@
+externalId: github-repo-deployer
+name: GitHub Repo to CDF Deployer
+creator: brent.groom@cognitedata.com
+description: v1.95 - CDF-integrated repository deployment with zip files from app-packages space
+published: true
+theme: Light
+entrypoint: main.py
+dataSetExternalId: streamlit-github-deployer-dataset

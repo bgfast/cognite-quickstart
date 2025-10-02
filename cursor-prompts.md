@@ -139,12 +139,12 @@ For the app packages system, deploy in this order (each "deploy" includes build 
    cdf deploy -m modules/app-packages-zips
    ```
 
-4. **GitHub Repo Deployer** (Streamlit app):
+4. **Streamlit GitHub Deployer** (Streamlit app):
    ```bash
    # Full deployment workflow for Streamlit app
-   cdf build -m modules/admin/github-repo-deployer
-   cdf deploy -m modules/admin/github-repo-deployer --dry-run
-   cdf deploy -m modules/admin/github-repo-deployer
+   cdf build --env=streamlit-github-deployer
+   cdf deploy --env=streamlit-github-deployer --dry-run
+   cdf deploy --env=streamlit-github-deployer
    ```
 
 ## App Packages Workflow
@@ -203,25 +203,235 @@ gh auth status
 - `foundation` should be deployed before other modules
 - `valhall_dm` is required for weather data modules
 
+### Streamlit Deployment Issues
+
+#### Critical SaaS Compatibility Fixes
+```bash
+# Error: StreamlitSetPageConfigMustBeFirstCommandError
+# Fix: Move st.set_page_config() to be the very first Streamlit command
+# Must be immediately after: import streamlit as st
+# This error only appears in SaaS, not localhost
+
+# Error: Circular import causing duplicate st.set_page_config()
+# Fix: Use parameter passing instead of direct imports between modules
+# Use sys.modules.get('main') for safe module access
+# Never import main.py from other modules
+
+# Error: CogniteClient initialization fails in SaaS
+# Fix: Use CogniteClient() with no parameters for SaaS
+# Fallback to OAuth2 credentials for local development
+```
+
+#### CDF Integration Patterns
+```bash
+# SaaS CogniteClient initialization (correct):
+from cognite.client import CogniteClient
+client = CogniteClient()  # No parameters needed in SaaS
+
+# Local CogniteClient initialization (fallback):
+config = ClientConfig(
+    client_name="app-name",
+    base_url=f"https://{cluster}.cognitedata.com",
+    project=project,
+    credentials=OAuthClientCredentials(...)
+)
+client = CogniteClient(config)
+
+# Error: CDF Files API not finding files in spaces
+# Fix: Use data modeling API for space-based file discovery
+# Files in spaces are data model instances, not regular files
+instances = client.data_modeling.instances.list(space='app-packages')
+
+# Error: Environment variables not passed to deployment
+# Fix: Use os.environ fallback when UI env_vars are empty
+# SaaS vs localhost behavior differences
+```
+
+#### Version Management
+```bash
+# Always update version in both places:
+# 1. GitHubRepoDeployer.Streamlit.yaml - description field
+# 2. main.py - page_title and st.caption
+# 3. Remove old nested files that might contain outdated versions
+```
+
+#### Module Structure Best Practices
+```bash
+# Streamlit apps should be top-level modules:
+# ✅ modules/streamlit-github-deployer/
+# ❌ modules/admin/github-repo-deployer/streamlit/
+
+# Directory structure must match Cognite toolkit expectations:
+# modules/[module-name]/streamlit/[externalId]/main.py
+# Where externalId matches the YAML file's externalId field
+```
+
+## Standard Streamlit App Template
+
+### Directory Structure Pattern
+```
+modules/[streamlit-app-name]/
+├── streamlit/
+│   ├── [AppName].Streamlit.yaml     ← Version in description (shows in SaaS list)
+│   └── [externalId]/
+│       ├── main.py                  ← Version in page_title & caption
+│       ├── requirements.txt
+│       └── services/
+├── data_sets/
+│   └── [app-name]-dataset.DataSet.yaml
+├── module.toml
+└── README.md
+```
+
+### Version Management Pattern (3 Required Locations)
+
+#### 1. Streamlit YAML Configuration
+```yaml
+# [AppName].Streamlit.yaml
+externalId: [app-external-id]
+name: [App Display Name]
+creator: [your-email]
+description: v[X.XX] - [Brief feature description]  # ← CRITICAL: Shows in SaaS Streamlit list
+published: true
+theme: Light
+entrypoint: main.py
+dataSetExternalId: [app-name]-dataset
+```
+
+#### 2. Main.py Page Configuration
+```python
+# main.py (MUST be FIRST Streamlit command)
+import streamlit as st
+
+st.set_page_config(
+    page_title="[App Name] v[X.XX]",  # ← Browser tab title
+    page_icon="🚀",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+```
+
+#### 3. Main.py UI Caption
+```python
+# main.py (in main UI section)
+st.title("🚀 [App Name]")
+st.markdown("[App description]")
+st.caption("Version [X.XX] - [Brief feature description]")  # ← Visible in app UI
+```
+
+### SaaS Compatibility Requirements
+```python
+# CogniteClient initialization for SaaS
+def initialize_cdf_client():
+    try:
+        # First try SaaS connection (no parameters needed)
+        from cognite.client import CogniteClient
+        client = CogniteClient()
+        is_local_env = False
+        return client, is_local_env
+    except Exception:
+        # Fallback to OAuth2 for local development
+        # ... OAuth2 setup code ...
+        pass
+
+# Avoid circular imports - use parameter passing
+def my_function(client, is_local_env):
+    # Pass client as parameter instead of importing from main
+    pass
+```
+
+### Version Update Checklist
+```markdown
+## Streamlit Version Update (v[OLD] → v[NEW])
+□ 1. Update [AppName].Streamlit.yaml description: "v[NEW] - [features]"
+□ 2. Update main.py page_title: "[App Name] v[NEW]"  
+□ 3. Update main.py st.caption: "Version [NEW] - [features]"
+□ 4. Build: cdf build --env=[app-config]
+□ 5. Dry-run: cdf deploy --env=[app-config] --dry-run
+□ 6. Deploy: cdf deploy --env=[app-config]
+□ 7. Verify version shows correctly in SaaS Streamlit list
+```
+
+### Config File Pattern
+```yaml
+# config.[app-name].yaml
+environment:
+  name: [app-name]
+  type: dev
+  selected:
+    - modules/[app-name]
+```
+
+### CogniteFile/Data Model Issues
+```bash
+# Error: Property 'owner' does not exist in view 'cdf_cdm:CogniteFile/v1'
+# Fix: Remove custom properties from node definitions extending CogniteFile
+
+# Error: Property 'metadata' does not exist in view 'cdf_cdm:CogniteFile/v1'  
+# Fix: Remove metadata section from CogniteFile.yaml templates
+
+# Only use properties that exist in the CDF view you're extending
+# Check CDF documentation for valid properties of each view type
+```
+
 ## File Locations
 
 ### Configuration Files
 - `config.dev.yaml` - Development environment config
 - `config.staging.yaml` - Staging environment config  
 - `config.prod.yaml` - Production environment config
+- `config.all.yaml` - All modules deployment config
 - `config.app-packages-dm.yaml` - App packages data model config
+- `config.app-packages-zips.yaml` - App packages zip files config
+- `config.streamlit-github-deployer.yaml` - Streamlit GitHub deployer config
+- `config.weather.yaml` - Weather data modules config
 - `cdfenv.sh` - Environment variables template
 
 ### Module Directories
-- `modules/app-packages-dm/` - Data model for app packages
-- `modules/app-packages-zips/` - Zip file management
-- `modules/admin/github-repo-deployer/` - Streamlit app for GitHub deployment
-- `modules/common/foundation/` - Basic CDF setup
-- `modules/common/valhall_dm/` - Valhall data model
+- `modules/app-packages-dm/` - Data model for app packages (foundational)
+- `modules/app-packages-zips/` - Zip file management and uploads
+- `modules/streamlit-github-deployer/` - Streamlit app for CDF-integrated GitHub deployment
+- `modules/neat-basic/` - Basic data model generated with neat library
+- `modules/common/foundation/` - Basic CDF setup (groups, datasets)
+- `modules/common/valhall_dm/` - Valhall data model and transformations
 - `modules/in-development/live_weather_data/` - Weather data integration
 
 ### Build Output
 - `build/` - Generated configuration files ready for deployment
+
+## Git Best Practices
+
+### .gitignore Management
+```bash
+# Always add large binary files to .gitignore
+echo "modules/app-packages-zips/files/*.zip" >> .gitignore
+
+# Ignore build artifacts
+echo "build/" >> .gitignore
+echo "tmp/" >> .gitignore
+```
+
+### Commit Workflow
+```bash
+# Always use git add . for comprehensive commits
+git add .
+git commit -m "descriptive commit message"
+git push
+
+# For pull requests
+gh pr create --title "Feature: Description" --body "Details"
+gh pr merge --squash
+```
+
+### Branch Management
+```bash
+# Create feature branches for major changes
+git checkout -b feature/streamlit-cdf-integration
+# ... make changes ...
+git add .
+git commit -m "Add CDF Files API integration to Streamlit"
+git push origin feature/streamlit-cdf-integration
+```
 
 ## Quick Commands Reference
 
@@ -230,7 +440,10 @@ gh auth status
 cdf build && cdf deploy --dry-run && cdf deploy
 
 # Download packages and deploy (with dry-run)
-cd modules/app-packages-zips/scripts/ && python download_packages.py && cd ../../.. && cdf build -m modules/app-packages-zips && cdf deploy -m modules/app-packages-zips --dry-run && cdf deploy -m modules/app-packages-zips
+cd modules/app-packages-zips/scripts/ && python download_packages.py && cd ../../.. && cdf build --env=app-packages-zips && cdf deploy --env=app-packages-zips --dry-run && cdf deploy --env=app-packages-zips
+
+# Deploy Streamlit app
+cdf build --env=streamlit-github-deployer && cdf deploy --env=streamlit-github-deployer --dry-run && cdf deploy --env=streamlit-github-deployer
 
 # Check build status
 ls -la build/
@@ -260,27 +473,44 @@ cdf deploy -e prod --dry-run
 cdf deploy -e prod
 ```
 
+## CDF Integration Patterns
+
+### App Packages System
+```bash
+# Complete app packages workflow
+cd modules/app-packages-zips/scripts/ && python download_packages.py
+cdf build --env=app-packages-dm && cdf deploy --env=app-packages-dm --dry-run && cdf deploy --env=app-packages-dm
+cdf build --env=app-packages-zips && cdf deploy --env=app-packages-zips --dry-run && cdf deploy --env=app-packages-zips
+```
+
+### Streamlit CDF Integration
+```bash
+# Deploy Streamlit app with CDF zip file integration
+cdf build --env=streamlit-github-deployer && cdf deploy --env=streamlit-github-deployer --dry-run && cdf deploy --env=streamlit-github-deployer
+
+# Key patterns:
+# - Use CogniteClient() with no parameters in SaaS
+# - Use data modeling API for space-based file discovery
+# - Files in spaces are instances, not regular files
+# - Environment variables must flow from UI to deployment process
+# - Avoid circular imports between modules
+# - st.set_page_config() must be first Streamlit command
+```
+
 ## Useful Cursor AI Prompts
 
-### "Deploy app-packages-dm to bgfast"
+### "Deploy streamlit-github-deployer to bgfast"
 ```
-Execute the full deployment workflow for app-packages-dm to bgfast environment:
-1. Verify CDF_PROJECT environment variables
-2. Set environment if needed (source cdfenv.sh && cdfenv bgfast)
-3. Verify CDF_PROJECT matches bgfast
-4. Build with --env=app-packages-dm
-5. Dry-run deploy
-6. Deploy
+Execute the full deployment workflow for the Streamlit app to bgfast environment:
+1. Verify environment (bgfast/bluefield)
+2. Build with --env=streamlit-github-deployer
+3. Dry-run deploy
+4. Deploy
 ```
 
-### "Deploy app-packages-zips to bgfast"  
+### "Deploy app-packages system to bgfast"
 ```
-Execute the full deployment workflow for app-packages-zips to bgfast environment with proper environment verification
-```
-
-### "Deploy all app packages modules to bgfast"
-```
-Deploy the complete app packages system to bgfast in order: foundation → app-packages-dm → app-packages-zips → github-repo-deployer
+Deploy the complete app packages system: download repos → deploy dm → deploy zips → deploy streamlit
 ```
 
 ### "Download the latest GitHub repositories"
@@ -288,14 +518,29 @@ Deploy the complete app packages system to bgfast in order: foundation → app-p
 Run the download script in modules/app-packages-zips/scripts/ to get the latest versions of all configured repositories
 ```
 
-### "Add a new repository to download"
+### "Create a new neat-basic data model"
 ```
-Add a new GitHub repository to the repositories.yaml file and test the download
+Set up a new data model module using neat library with basic containers and views
 ```
 
-### "Check module deployment status"
+### "Create new Streamlit app from template"
 ```
-Verify that all modules are built correctly and check the build directory contents
+Set up a new Streamlit app following the standard pattern:
+1. Create module directory structure
+2. Set up YAML with version in description
+3. Create main.py with SaaS-compatible CogniteClient
+4. Add version in 3 required locations
+5. Create config file for deployment
+```
+
+### "Fix Streamlit SaaS deployment error"
+```
+Check and fix st.set_page_config() placement and version number consistency
+```
+
+### "Update Streamlit app version"
+```
+Update version in all 3 required locations following the standard checklist
 ```
 
 ## Deployment Workflow Definition
