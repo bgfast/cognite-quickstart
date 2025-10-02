@@ -13,36 +13,41 @@ from main import CLIENT, IS_LOCAL_ENV
 
 
 def get_available_zip_files() -> List[Dict]:
-    """Get list of available zip files from CDF Files API"""
+    """Get list of available zip files from app-packages space using data modeling API"""
     if not CLIENT or IS_LOCAL_ENV:
         return []
     
     try:
-        # Search for our specific app-packages zip files
-        all_files = CLIENT.files.list(limit=5000)  # Use higher limit to find all files
+        # Use data modeling API to find zip file instances in app-packages space
+        instances = CLIENT.data_modeling.instances.list(
+            instance_type='node',
+            space='app-packages',
+            limit=100
+        )
         
-        # Filter for our specific app-packages zip files
-        our_zip_names = ['cognite-library-pattern-mode-beta.zip', 'cognite-quickstart-main.zip', 'cognite-samples-main.zip']
-        zip_files_found = [f for f in all_files if f.name in our_zip_names]
+        # Filter for zip file instances (exclude the app-package node definition)
+        zip_instances = [inst for inst in instances if inst.external_id.endswith('.zip')]
         
-        st.info(f"🔍 Found {len(zip_files_found)} app-packages zip files out of {len(all_files)} total files")
+        st.info(f"🔍 Found {len(zip_instances)} zip file instances in app-packages space")
         
+        # Convert instances to file info for the UI
         zip_files = []
-        for file in zip_files_found:
+        for instance in zip_instances:
             # Extract repository info from filename
-            filename = file.name
+            filename = instance.external_id
             if filename.endswith('.zip'):
                 repo_name = filename.replace('.zip', '')
                 
                 zip_files.append({
-                    'id': file.id,
-                    'external_id': file.external_id,
-                    'name': file.name,
+                    'external_id': instance.external_id,
+                    'name': filename,
                     'repo_name': repo_name,
-                    'uploaded_time': file.uploaded_time,
-                    'metadata': file.metadata or {},
-                    'mime_type': file.mime_type,
-                    'uploaded': file.uploaded
+                    'uploaded_time': instance.created_time,
+                    'metadata': {},
+                    'mime_type': 'application/zip',
+                    'uploaded': True,
+                    'space': 'app-packages',
+                    'is_data_model_file': True  # Flag to indicate this is a data modeling file
                 })
         
         return sorted(zip_files, key=lambda x: x['uploaded_time'], reverse=True)
@@ -104,17 +109,22 @@ def render_cdf_zip_selection() -> Optional[Dict]:
 
 
 def download_zip_from_cdf(file_info: Dict) -> Optional[str]:
-    """Download zip file from CDF Files API"""
+    """Download zip file from CDF - handles both regular files and data modeling files"""
     if not CLIENT or IS_LOCAL_ENV:
         st.error("CDF client not available")
         return None
     
     try:
         with st.status(f"📥 Downloading {file_info['name']} from CDF...", expanded=True) as status:
-            status.write("Requesting file from CDF Files API...")
             
-            # Download file content
-            file_content = CLIENT.files.download_bytes(id=file_info['id'])
+            if file_info.get('is_data_model_file', False):
+                # This is a data modeling file - download by external_id
+                status.write("Requesting data modeling file from CDF...")
+                file_content = CLIENT.files.download_bytes(external_id=file_info['external_id'])
+            else:
+                # Regular file - download by ID
+                status.write("Requesting file from CDF Files API...")
+                file_content = CLIENT.files.download_bytes(id=file_info['id'])
             
             status.write(f"Downloaded {len(file_content):,} bytes")
             
