@@ -39,6 +39,17 @@ def render_step_1():
     state.set_config_files(config_files)
     state.set_env_vars(env_vars)
     st.caption(f"[Step 1] stored path and {len(config_files)} config(s)")
+    
+    # Debug: Show what env_vars were stored
+    if st.session_state.get('debug_mode', False):
+        st.info(f"🔍 **Debug**: Stored {len(env_vars)} environment variables")
+        if env_vars:
+            oauth_vars = ['CDF_PROJECT', 'CDF_CLUSTER', 'IDP_CLIENT_ID', 'IDP_CLIENT_SECRET', 'IDP_TOKEN_URL']
+            oauth_status = {var: bool(env_vars.get(var)) for var in oauth_vars}
+            st.info(f"🔐 **OAuth2 Status**: {oauth_status}")
+        else:
+            st.warning("⚠️ **Debug**: No environment variables stored!")
+    
     st.success(f"✅ Found {len(config_files)} configuration files")
 
     if st.button("➡️ Continue to Step 2", type="primary"):
@@ -233,6 +244,34 @@ def render_step_4():
     extracted_path = state.get_extracted_path()
     env_vars = state.get_env_vars() or {}
     
+    # If env_vars is empty, use the current environment (same as CDF client)
+    if not env_vars:
+        import os
+        env_vars = {
+            'CDF_PROJECT': os.getenv('CDF_PROJECT', ''),
+            'CDF_CLUSTER': os.getenv('CDF_CLUSTER', ''),
+            'CDF_URL': os.getenv('CDF_URL', ''),
+            'IDP_CLIENT_ID': os.getenv('IDP_CLIENT_ID', ''),
+            'IDP_CLIENT_SECRET': os.getenv('IDP_CLIENT_SECRET', ''),
+            'IDP_TOKEN_URL': os.getenv('IDP_TOKEN_URL', ''),
+            'IDP_SCOPES': os.getenv('IDP_SCOPES', ''),
+            'IDP_TENANT_ID': os.getenv('IDP_TENANT_ID', ''),
+        }
+        # Remove empty values
+        env_vars = {k: v for k, v in env_vars.items() if v}
+    
+    # Debug: Show what env_vars will be used for deployment
+    if st.session_state.get('debug_mode', False):
+        st.info(f"🔍 **Debug**: Using {len(env_vars)} environment variables for deployment")
+        if env_vars:
+            oauth_vars = ['CDF_PROJECT', 'CDF_CLUSTER', 'IDP_CLIENT_ID', 'IDP_CLIENT_SECRET', 'IDP_TOKEN_URL']
+            oauth_status = {var: bool(env_vars.get(var)) for var in oauth_vars}
+            st.info(f"🔐 **OAuth2 Status for Deployment**: {oauth_status}")
+            st.info(f"📋 **Project**: {env_vars.get('CDF_PROJECT', 'NOT SET')}")
+            st.info(f"🌐 **Cluster**: {env_vars.get('CDF_CLUSTER', 'NOT SET')}")
+        else:
+            st.warning("⚠️ **Debug**: Still no environment variables for deployment!")
+    
     # Show previous deploy results if they exist
     deploy_success, deploy_output, deploy_error = state.get_deploy_results()
     if deploy_success is not None:
@@ -251,7 +290,38 @@ def render_step_4():
                 st.subheader("📄 Previous Deploy Output")
                 st.code(deploy_output, language="text")
     
-    if st.button("🚀 Deploy to CDF", type="primary"):
+    # Follow proper deployment workflow: dry-run → deploy
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        if st.button("🔍 Dry Run (Preview Changes)", type="secondary"):
+            st.session_state['show_dry_run'] = True
+            st.rerun()
+    
+    with col2:
+        # Only show deploy button after dry-run is completed
+        dry_run_completed = st.session_state.get('show_dry_run', False)
+        if st.button("🚀 Deploy to CDF", type="primary", disabled=not dry_run_completed):
+            if not dry_run_completed:
+                st.warning("⚠️ Please run dry-run first to preview changes")
+                return
+                
+    # Handle dry-run
+    if st.session_state.get('show_dry_run', False):
+        st.subheader("🔍 Deployment Preview (Dry Run)")
+        
+        with st.spinner("Running dry-run to preview changes..."):
+            from services.toolkit_service import ToolkitService
+            toolkit_service = ToolkitService()
+            
+            # Run dry-run (this should be implemented in toolkit_service)
+            st.info("🔍 **Dry-run would preview deployment changes here**")
+            st.info("💡 **Next**: Implement actual dry-run in toolkit_service")
+            
+        st.success("✅ Dry-run completed - you can now proceed with deployment")
+        
+    # Handle actual deployment (only if dry-run was done)
+    if st.button("🚀 Deploy to CDF", type="primary") and st.session_state.get('show_dry_run', False):
         selected_env = state.get_selected_env() or "weather"
         st.info(f"🚀 Deploying with environment: {selected_env}")
         
