@@ -30,39 +30,83 @@ def render_repo_inputs():
     return "cdf", "packages", "main", "CDF Files"
 
 def render_download_section(repo_owner, repo_name, selected_branch, access_type):
-    """Render download section - CDF zip files only"""
-    st.header("📦 Select Repository from CDF")
+    """Render download section - handles both local and SaaS environments"""
+    st.header("📦 Repository Selection")
     
     # Import CDF files service
     from services.cdf_files_service import render_cdf_zip_selection, download_zip_from_cdf
+    from main import CLIENT, IS_LOCAL_ENV
     
-    # Only option: CDF zip files
-    selected_zip = render_cdf_zip_selection()
-    if not selected_zip:
-        return None
-    
-    # Download and extract from CDF
-    with st.spinner("📥 Downloading from CDF..."):
-        zip_path = download_zip_from_cdf(selected_zip)
-        if not zip_path:
-            st.error("Failed to download from CDF")
-            return None
-            
-        extracted_path = extract_zip_to_temp_dir(zip_path)
-        if not extracted_path:
-            st.error("Failed to extract zip file")
-            return None
-            
-        st.session_state['extracted_path'] = extracted_path
+    # Check environment and provide appropriate options
+    if CLIENT and not IS_LOCAL_ENV:
+        # SaaS environment - use CDF zip files
+        st.info("🚀 **SaaS Mode**: Using CDF zip files for fast, reliable downloads")
         
-        # Clean up temp zip file
-        try:
-            os.unlink(zip_path)
-        except:
-            pass
-            
-        st.success("✅ Repository downloaded and extracted from CDF")
-        return extracted_path
+        # Step 1: Show available repositories and let user select
+        selected_zip = render_cdf_zip_selection()
+        if not selected_zip:
+            return None
+        
+        st.success(f"✅ Selected: {selected_zip['name']}")
+        
+        # Step 2: Show download button - only download when user clicks
+        if st.button("📥 Download Repository", type="primary", key="download_from_cdf"):
+            # Download and extract from CDF
+            with st.spinner("📥 Downloading from CDF..."):
+                zip_path = download_zip_from_cdf(selected_zip)
+                if not zip_path:
+                    st.error("Failed to download from CDF")
+                    return None
+                    
+                extracted_path = extract_zip_to_temp_dir(zip_path)
+                if not extracted_path:
+                    st.error("Failed to extract zip file")
+                    return None
+                    
+                st.session_state['extracted_path'] = extracted_path
+                
+                # Clean up temp zip file
+                try:
+                    os.unlink(zip_path)
+                except:
+                    pass
+                    
+                st.success("✅ Repository downloaded and extracted from CDF")
+                return extracted_path
+        
+        return None
+        
+    else:
+        # Local development - provide fallback options
+        st.info("💻 **Local Development Mode**: CDF zip files not available")
+        
+        # Check for local bundled files or directories
+        base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+        local_repo_dir = os.path.join(base_dir, "cognite-quickstart-main")
+        bundled_zip = os.path.join(base_dir, "bundled_repo.zip")
+        
+        if os.path.isdir(local_repo_dir):
+            st.success("📂 Using local repository directory for development")
+            st.session_state['extracted_path'] = local_repo_dir
+            return local_repo_dir
+        elif os.path.exists(bundled_zip):
+            st.info("📦 Using bundled repository for development")
+            if st.button("📥 Extract Bundled Repository", type="primary"):
+                extracted = extract_zip_to_temp_dir(bundled_zip)
+                if extracted:
+                    st.session_state['extracted_path'] = extracted
+                    st.success("✅ Repository extracted from bundled ZIP")
+                    return extracted
+                else:
+                    st.error("❌ Failed to extract bundled ZIP")
+            return None
+        else:
+            st.error("❌ No local repository or bundled files available for development")
+            st.info("💡 **Options for local development:**")
+            st.info("- Place a repository in `cognite-quickstart-main/` directory")
+            st.info("- Add a `bundled_repo.zip` file")
+            st.info("- Deploy to CDF Streamlit for full CDF integration")
+            return None
 
 def extract_zip_to_temp_dir(zip_path):
     """Extract ZIP file to temporary directory (for future CDF zip download feature)"""

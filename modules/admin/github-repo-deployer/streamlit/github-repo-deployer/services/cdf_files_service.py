@@ -31,24 +31,36 @@ def get_available_zip_files() -> List[Dict]:
         st.info(f"🔍 Found {len(zip_instances)} zip file instances in app-packages space")
         
         # Convert instances to file info for the UI
+        # We need to get the actual file objects to have the file IDs for download
         zip_files = []
+        all_files = CLIENT.files.list(limit=5000)
+        
         for instance in zip_instances:
-            # Extract repository info from filename
+            # Find the corresponding file object
             filename = instance.external_id
             if filename.endswith('.zip'):
                 repo_name = filename.replace('.zip', '')
                 
-                zip_files.append({
-                    'external_id': instance.external_id,
-                    'name': filename,
-                    'repo_name': repo_name,
-                    'uploaded_time': instance.created_time,
-                    'metadata': {},
-                    'mime_type': 'application/zip',
-                    'uploaded': True,
-                    'space': 'app-packages',
-                    'is_data_model_file': True  # Flag to indicate this is a data modeling file
-                })
+                # Find the actual file object by name
+                file_obj = None
+                for f in all_files:
+                    if f.name == filename:
+                        file_obj = f
+                        break
+                
+                if file_obj:
+                    zip_files.append({
+                        'id': file_obj.id,  # Use file ID for download
+                        'external_id': instance.external_id,
+                        'name': filename,
+                        'repo_name': repo_name,
+                        'uploaded_time': instance.created_time,
+                        'metadata': file_obj.metadata or {},
+                        'mime_type': file_obj.mime_type,
+                        'uploaded': file_obj.uploaded,
+                        'space': 'app-packages',
+                        'is_data_model_file': False  # Use regular file download since we have file ID
+                    })
         
         return sorted(zip_files, key=lambda x: x['uploaded_time'], reverse=True)
         
@@ -62,7 +74,9 @@ def render_cdf_zip_selection() -> Optional[Dict]:
     st.subheader("📦 Available Repositories from CDF")
     
     if not CLIENT or IS_LOCAL_ENV:
-        st.warning("⚠️ CDF connection not available. Using GitHub direct download.")
+        st.warning("⚠️ CDF connection not available.")
+        st.info("💡 **Local Development**: CDF zip files not accessible in local mode")
+        st.info("🚀 **SaaS Deployment**: This feature works when deployed to CDF Streamlit")
         return None
     
     zip_files = get_available_zip_files()
@@ -76,7 +90,16 @@ def render_cdf_zip_selection() -> Optional[Dict]:
     # Create selection options
     options = []
     for zf in zip_files:
-        upload_date = zf['uploaded_time'].strftime('%Y-%m-%d %H:%M')
+        # Handle timestamp conversion (uploaded_time might be int timestamp)
+        try:
+            if isinstance(zf['uploaded_time'], int):
+                from datetime import datetime
+                upload_date = datetime.fromtimestamp(zf['uploaded_time'] / 1000).strftime('%Y-%m-%d %H:%M')
+            else:
+                upload_date = zf['uploaded_time'].strftime('%Y-%m-%d %H:%M')
+        except:
+            upload_date = "unknown"
+        
         option_text = f"{zf['repo_name']} (uploaded {upload_date})"
         options.append(option_text)
     
@@ -94,9 +117,20 @@ def render_cdf_zip_selection() -> Optional[Dict]:
         with st.expander("📋 File Details"):
             st.write(f"**Name**: {selected_file['name']}")
             st.write(f"**MIME Type**: {selected_file['mime_type']}")
-            st.write(f"**Uploaded**: {selected_file['uploaded_time']}")
+            
+            # Handle timestamp display
+            try:
+                if isinstance(selected_file['uploaded_time'], int):
+                    from datetime import datetime
+                    upload_time = datetime.fromtimestamp(selected_file['uploaded_time'] / 1000).strftime('%Y-%m-%d %H:%M:%S')
+                else:
+                    upload_time = str(selected_file['uploaded_time'])
+            except:
+                upload_time = "unknown"
+            
+            st.write(f"**Uploaded**: {upload_time}")
             st.write(f"**External ID**: {selected_file['external_id']}")
-            st.write(f"**File ID**: {selected_file['id']}")
+            st.write(f"**Space**: {selected_file.get('space', 'unknown')}")
             
             if selected_file['metadata']:
                 st.write("**Metadata**:")
@@ -116,15 +150,9 @@ def download_zip_from_cdf(file_info: Dict) -> Optional[str]:
     
     try:
         with st.status(f"📥 Downloading {file_info['name']} from CDF...", expanded=True) as status:
-            
-            if file_info.get('is_data_model_file', False):
-                # This is a data modeling file - download by external_id
-                status.write("Requesting data modeling file from CDF...")
-                file_content = CLIENT.files.download_bytes(external_id=file_info['external_id'])
-            else:
-                # Regular file - download by ID
-                status.write("Requesting file from CDF Files API...")
-                file_content = CLIENT.files.download_bytes(id=file_info['id'])
+            # Always download by file ID since that's what works
+            status.write("Requesting file from CDF Files API...")
+            file_content = CLIENT.files.download_bytes(id=file_info['id'])
             
             status.write(f"Downloaded {len(file_content):,} bytes")
             
