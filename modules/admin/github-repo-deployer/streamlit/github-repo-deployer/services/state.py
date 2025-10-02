@@ -61,6 +61,18 @@ def get_deploy_results() -> tuple[bool | None, str, str]:
         st.session_state.get('deploy_error', '')
     )
 
+def set_download_results(success: bool, repo_name: str, message: str) -> None:
+    st.session_state['download_success'] = success
+    st.session_state['download_repo_name'] = repo_name
+    st.session_state['download_message'] = message
+
+def get_download_results() -> tuple[bool | None, str, str]:
+    return (
+        st.session_state.get('download_success'),
+        st.session_state.get('download_repo_name', ''),
+        st.session_state.get('download_message', '')
+    )
+
 def reset() -> None:
     for key in ['workflow_step','extracted_path','config_files','env_vars','selected_config','selected_env']:
         if key in st.session_state:
