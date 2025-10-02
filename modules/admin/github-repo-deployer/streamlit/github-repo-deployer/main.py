@@ -170,7 +170,7 @@ def main():
     
     # Debug mode toggle
     if 'debug_mode' not in st.session_state:
-        st.session_state['debug_mode'] = False
+        st.session_state['debug_mode'] = True  # Default to True for development
     
     with st.sidebar:
         st.header("Settings")
