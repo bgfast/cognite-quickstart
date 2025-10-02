@@ -1,0 +1,10 @@
+[module]
+title = "GitHub Repo Deployer Streamlit App"
+
+[packages]
+tags = [
+    "streamlit",
+    "github",
+    "deployment",
+    "admin",
+]

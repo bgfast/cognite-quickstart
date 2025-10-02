@@ -1,0 +1,9 @@
+[module]
+title = "Neat Basic Data Model"
+
+[packages]
+tags = [
+    "neat",
+    "data-model",
+    "basic",
+]
