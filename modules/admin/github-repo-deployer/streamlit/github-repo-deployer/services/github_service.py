@@ -7,162 +7,62 @@ import shutil
 from . import state
 
 def render_repo_inputs():
-    """Render repository input UI and return repo details"""
-    st.header("📁 Repository Configuration")
+    """Simplified repo inputs - CDF zip files only"""
+    st.subheader("📦 Repository Selection")
+    st.info("🎯 This app uses pre-downloaded repositories from CDF Files API")
+    st.caption("Repositories are managed by the app-packages-zips module")
     
-    # Repository input method
-    input_method = st.radio("How would you like to specify the repository?", ["🔗 Paste GitHub URL", "✏️ Enter Owner & Name"])
-    
-    repo_owner = None
-    repo_name = None
-    selected_branch = "main"
-    access_type = "🌐 Public Repository (No GitHub account needed)"
-    
-    if input_method == "🔗 Paste GitHub URL":
-        url = st.text_input("GitHub Repository URL", value="https://github.com/bgfast/cognite-quickstart", placeholder="https://github.com/owner/repo")
+    # Show available repositories info
+    with st.expander("ℹ️ About CDF Repository Access"):
+        st.markdown("""
+        **Benefits of CDF Files approach:**
+        - ⚡ **Faster downloads** - Files are already in CDF
+        - 🔒 **No GitHub authentication** needed
+        - 📱 **Offline capability** - Works without internet access to GitHub
+        - 🚫 **No rate limits** - Bypass GitHub API limitations
         
-        if url:
-            # Parse GitHub URL
-            import re
-            patterns = [
-                r'https?://github\.com/([^/]+)/([^/]+)',
-                r'git@github\.com:([^/]+)/([^/]+)',
-                r'github\.com/([^/]+)/([^/]+)'
-            ]
-            
-            for pattern in patterns:
-                match = re.search(pattern, url)
-                if match:
-                    repo_owner, repo_name = match.group(1), match.group(2)
-                    break
-            
-            if not repo_owner or not repo_name:
-                st.error("❌ Invalid GitHub URL. Please enter a valid GitHub repository URL.")
-                return None
-            else:
-                st.success(f"✅ Parsed: {repo_owner}/{repo_name}")
+        **Available repositories are managed by:**
+        - `modules/app-packages-zips/scripts/download_packages.py`
+        - `modules/app-packages-zips/scripts/repositories.yaml`
+        """)
     
-    elif input_method == "✏️ Enter Owner & Name":
-        col1, col2 = st.columns(2)
-        with col1:
-            repo_owner = st.text_input("Repository Owner", placeholder="owner")
-        with col2:
-            repo_name = st.text_input("Repository Name", placeholder="repo")
-    
-    if not repo_owner or not repo_name:
-        return None
-    
-    # Load available branches with rate limiting
-    with st.spinner("Loading available branches..."):
-        try:
-            from core.rate_limiter import get_github_branches_with_rate_limit
-            branches = get_github_branches_with_rate_limit(repo_owner, repo_name)
-        except ImportError:
-            # Fallback to simple request if rate limiter not available
-            import requests
-            url = f"https://api.github.com/repos/{repo_owner}/{repo_name}/branches"
-            try:
-                response = requests.get(url, timeout=10)
-                if response.status_code == 200:
-                    branches_data = response.json()
-                    branches = [branch['name'] for branch in branches_data]
-                else:
-                    st.warning(f"⚠️ Could not load branches: {response.status_code}")
-                    branches = ["main"]
-            except Exception as e:
-                st.warning(f"⚠️ Could not load branches: {e}")
-                branches = ["main"]
-    
-    if branches:
-        selected_branch = st.selectbox("Select Branch", branches, index=0 if "main" in branches else 0)
-        st.info(f"📋 Found {len(branches)} branches")
-    else:
-        st.warning("⚠️ Could not load branches, using 'main' as default")
-        selected_branch = "main"
-    
-    # Store in session state
-    st.session_state['repo_owner'] = repo_owner
-    st.session_state['repo_name'] = repo_name
-    st.session_state['selected_branch'] = selected_branch
-    st.session_state['access_type'] = access_type
-    
-    return repo_owner, repo_name, selected_branch, access_type
+    # Return dummy values since we'll select the actual repo from CDF
+    return "cdf", "packages", "main", "CDF Files"
 
 def render_download_section(repo_owner, repo_name, selected_branch, access_type):
-    """Render download section and handle repository download with caching"""
-    st.header("📥 Download Repository")
+    """Render download section - CDF zip files only"""
+    st.header("📦 Select Repository from CDF")
     
-    # Fast-iteration path: allow using a bundled ZIP that ships with the app
-    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-    bundled_zip = os.path.join(base_dir, "bundled_repo.zip")
-    bundled_exists = os.path.exists(bundled_zip)
-    local_repo_dir = os.path.join(base_dir, "cognite-quickstart-main")
-    local_repo_exists = os.path.isdir(local_repo_dir)
-    if local_repo_exists:
-        st.info("📂 Using local repo directory for fast iteration")
-        st.session_state['extracted_path'] = local_repo_dir
-        return local_repo_dir
-    if bundled_exists:
-        with st.status("📦 Using bundled_repo.zip", expanded=True) as s:
-            s.write("Extracting bundled ZIP...")
-            extracted = extract_zip_to_temp_dir(bundled_zip)
-            if extracted:
-                st.session_state['extracted_path'] = extracted
-                s.update(label=f"✅ Extracted to {extracted}", state="complete")
-                st.success("✅ Repository extracted from bundled ZIP")
-                return extracted
-            else:
-                s.update(label="❌ Failed to extract bundled ZIP", state="error")
-                st.error("❌ Failed to extract bundled ZIP")
-                return None
+    # Import CDF files service
+    from services.cdf_files_service import render_cdf_zip_selection, download_zip_from_cdf
     
-    # Check if repository is already cached
-    from core.cache_manager import is_repository_cached, get_cached_repository, cache_repository, get_cache_stats
+    # Only option: CDF zip files
+    selected_zip = render_cdf_zip_selection()
+    if not selected_zip:
+        return None
     
-    is_cached = is_repository_cached(repo_owner, repo_name, selected_branch)
-    
-    if is_cached:
-        st.success(f"✅ Repository {repo_owner}/{repo_name}@{selected_branch} is already cached!")
-        st.info("💾 Using cached version to avoid re-downloading")
+    # Download and extract from CDF
+    with st.spinner("📥 Downloading from CDF..."):
+        zip_path = download_zip_from_cdf(selected_zip)
+        if not zip_path:
+            st.error("Failed to download from CDF")
+            return None
+            
+        extracted_path = extract_zip_to_temp_dir(zip_path)
+        if not extracted_path:
+            st.error("Failed to extract zip file")
+            return None
+            
+        st.session_state['extracted_path'] = extracted_path
         
-        # Show cache stats
-        cache_stats = get_cache_stats()
-        st.info(f"📊 Cache: {cache_stats['total_repositories']} repos, {cache_stats['total_size_mb']} MB")
-        
-        if st.button("🔄 Force Re-download", help="Download fresh copy even if cached"):
-            # Force download
-            with st.spinner(f"Downloading {repo_owner}/{repo_name} ({selected_branch})..."):
-                repo_path = download_github_repo_zip(repo_owner, repo_name, selected_branch)
-                
-                if repo_path:
-                    st.session_state['extracted_path'] = repo_path
-                    st.success("✅ Repository downloaded and cached successfully!")
-                    return repo_path
-                else:
-                    st.error("❌ Failed to download repository")
-                    return None
-        else:
-            # Use cached version directly (return directory path, not a ZIP)
-            cached_path = get_cached_repository(repo_owner, repo_name, selected_branch)
-            if cached_path:
-                st.session_state['extracted_path'] = cached_path
-                st.success("✅ Using cached repository!")
-                return cached_path
-    else:
-        # Not cached, download normally
-        if st.button("📥 Download Repository", type="primary"):
-            with st.spinner(f"Downloading {repo_owner}/{repo_name} ({selected_branch})..."):
-                repo_path = download_github_repo_zip(repo_owner, repo_name, selected_branch)
-                
-                if repo_path:
-                    st.session_state['extracted_path'] = repo_path
-                    st.success("✅ Repository downloaded and cached successfully!")
-                    return repo_path
-                else:
-                    st.error("❌ Failed to download repository")
-                    return None
-    
-    return None
+        # Clean up temp zip file
+        try:
+            os.unlink(zip_path)
+        except:
+            pass
+            
+        st.success("✅ Repository downloaded and extracted from CDF")
+        return extracted_path
 
 def extract_zip_to_temp_dir(zip_path):
     """Extract ZIP file to temporary directory (for future CDF zip download feature)"""
