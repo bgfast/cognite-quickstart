@@ -101,51 +101,13 @@ USER_IDENTIFIER=
 def render_env_ui():
     env_option = st.radio(
         "Choose how to handle environment variables:",
-        ["📁 Upload .env file", "🔄 Generate from current CDF connection", "⏭️ Skip (use existing environment)"],
+        ["🔄 Generate from current CDF connection", "⏭️ Skip (use existing environment)"],
         help="Select how you want to provide environment variables for the deployment"
     )
     
     env_vars = {}
     
-    if env_option == "📁 Upload .env file":
-        st.subheader("📁 Upload Environment File")
-        uploaded_file = st.file_uploader(
-            "Choose an environment file",
-            type=None,
-            help="Upload an environment file (.env, .txt, or any text file) containing your CDF project configuration"
-        )
-        
-        if uploaded_file is not None:
-            try:
-                # Read the uploaded file content
-                content = uploaded_file.getvalue().decode('utf-8')
-                
-                # Parse the environment variables
-                env_vars = parse_env_file_content(content)
-                
-                # Validate the environment variables
-                missing_vars = validate_env_vars(env_vars)
-                
-                if missing_vars:
-                    st.warning(f"⚠️ Missing required environment variables: {', '.join(missing_vars)}")
-                    st.info("💡 Make sure your .env file contains CDF_PROJECT and CDF_CLUSTER")
-                else:
-                    st.success("✅ Environment file parsed successfully!")
-                    st.write(f"**Found {len(env_vars)} environment variables**")
-                    
-                    # Show a preview of the environment variables (without sensitive values)
-                    with st.expander("📋 Environment Variables Preview"):
-                        for key, value in env_vars.items():
-                            if 'secret' in key.lower() or 'password' in key.lower() or 'token' in key.lower():
-                                st.write(f"**{key}**: `***hidden***`")
-                            else:
-                                st.write(f"**{key}**: `{value}`")
-                
-            except Exception as e:
-                st.error(f"❌ Error reading .env file: {e}")
-                st.info("💡 Make sure the file is a valid .env file with KEY=VALUE format")
-    
-    elif env_option == "🔄 Generate from current CDF connection":
+    if env_option == "🔄 Generate from current CDF connection":
         st.subheader("🔄 Generate from Current CDF Connection")
         st.info("This will generate a .env file based on your current CDF connection settings.")
         
@@ -187,7 +149,7 @@ def render_env_ui():
         }
         
         # Add other relevant environment variables
-        for key in ['IDP_CLIENT_ID', 'IDP_CLIENT_SECRET', 'IDP_TENANT_ID']:
+        for key in ['IDP_CLIENT_ID', 'IDP_CLIENT_SECRET', 'IDP_TENANT_ID', 'IDP_TOKEN_URL', 'IDP_SCOPES']:
             if os.getenv(key):
                 env_vars[key] = os.getenv(key)
         
@@ -195,6 +157,14 @@ def render_env_ui():
             st.success("✅ Found CDF project configuration in environment")
             st.write(f"**Project**: {env_vars.get('CDF_PROJECT')}")
             st.write(f"**Cluster**: {env_vars.get('CDF_CLUSTER')}")
+            
+            # Show OAuth2 credential status for deployment
+            oauth_vars = ['IDP_CLIENT_ID', 'IDP_CLIENT_SECRET', 'IDP_TOKEN_URL']
+            oauth_status = {var: bool(env_vars.get(var)) for var in oauth_vars}
+            if all(oauth_status.values()):
+                st.success("✅ OAuth2 credentials available for deployment")
+            else:
+                st.warning(f"⚠️ Missing OAuth2 credentials: {[k for k, v in oauth_status.items() if not v]}")
         else:
             st.warning("⚠️ CDF_PROJECT or CDF_CLUSTER not found in environment")
     
