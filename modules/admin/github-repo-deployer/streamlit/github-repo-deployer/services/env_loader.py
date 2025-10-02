@@ -99,74 +99,39 @@ USER_IDENTIFIER=
     return env_content
 
 def render_env_ui():
-    env_option = st.radio(
-        "Choose how to handle environment variables:",
-        ["🔄 Generate from current CDF connection", "⏭️ Skip (use existing environment)"],
-        help="Select how you want to provide environment variables for the deployment"
-    )
+    st.subheader("🔧 Environment Variables")
+    st.info("Using existing environment variables from current session")
     
-    env_vars = {}
+    # Always use existing environment - no options needed
+    env_option = "⏭️ Skip (use existing environment)"
     
-    if env_option == "🔄 Generate from current CDF connection":
-        st.subheader("🔄 Generate from Current CDF Connection")
-        st.info("This will generate a .env file based on your current CDF connection settings.")
-        
-        if st.button("🔄 Generate .env file"):
-            with st.spinner("Generating .env file from current CDF connection..."):
-                env_content = generate_env_file_from_cdf()
-                
-                if env_content:
-                    st.success("✅ Generated .env file from current CDF connection!")
-                    
-                    # Parse the generated content
-                    env_vars = parse_env_file_content(env_content)
-                    
-                    # Show the generated content
-                    with st.expander("📋 Generated .env file content"):
-                        st.code(env_content, language='bash')
-                    
-                    # Allow download
-                    st.download_button(
-                        label="📥 Download .env file",
-                        data=env_content,
-                        file_name="cdf_connection.env",
-                        mime="text/plain"
-                    )
-                else:
-                    st.error("❌ Could not generate .env file from current CDF connection")
-                    st.info("💡 Make sure you're connected to a CDF project")
+    # Get current environment variables
+    import os
+    env_vars = {
+        'CDF_PROJECT': os.getenv('CDF_PROJECT', ''),
+        'CDF_CLUSTER': os.getenv('CDF_CLUSTER', ''),
+        'CDF_URL': os.getenv('CDF_URL', ''),
+    }
     
-    elif env_option == "⏭️ Skip (use existing environment)":
-        st.subheader("⏭️ Use Existing Environment")
-        st.info("Using environment variables from the current session.")
+    # Add other relevant environment variables
+    for key in ['IDP_CLIENT_ID', 'IDP_CLIENT_SECRET', 'IDP_TENANT_ID', 'IDP_TOKEN_URL', 'IDP_SCOPES']:
+        if os.getenv(key):
+            env_vars[key] = os.getenv(key)
+    
+    if env_vars.get('CDF_PROJECT') and env_vars.get('CDF_CLUSTER'):
+        st.success("✅ Found CDF project configuration in environment")
+        st.write(f"**Project**: {env_vars.get('CDF_PROJECT')}")
+        st.write(f"**Cluster**: {env_vars.get('CDF_CLUSTER')}")
         
-        # Get current environment variables
-        import os
-        env_vars = {
-            'CDF_PROJECT': os.getenv('CDF_PROJECT', ''),
-            'CDF_CLUSTER': os.getenv('CDF_CLUSTER', ''),
-            'CDF_URL': os.getenv('CDF_URL', ''),
-        }
-        
-        # Add other relevant environment variables
-        for key in ['IDP_CLIENT_ID', 'IDP_CLIENT_SECRET', 'IDP_TENANT_ID', 'IDP_TOKEN_URL', 'IDP_SCOPES']:
-            if os.getenv(key):
-                env_vars[key] = os.getenv(key)
-        
-        if env_vars.get('CDF_PROJECT') and env_vars.get('CDF_CLUSTER'):
-            st.success("✅ Found CDF project configuration in environment")
-            st.write(f"**Project**: {env_vars.get('CDF_PROJECT')}")
-            st.write(f"**Cluster**: {env_vars.get('CDF_CLUSTER')}")
-            
-            # Show OAuth2 credential status for deployment
-            oauth_vars = ['IDP_CLIENT_ID', 'IDP_CLIENT_SECRET', 'IDP_TOKEN_URL']
-            oauth_status = {var: bool(env_vars.get(var)) for var in oauth_vars}
-            if all(oauth_status.values()):
-                st.success("✅ OAuth2 credentials available for deployment")
-            else:
-                st.warning(f"⚠️ Missing OAuth2 credentials: {[k for k, v in oauth_status.items() if not v]}")
+        # Show OAuth2 credential status for deployment
+        oauth_vars = ['IDP_CLIENT_ID', 'IDP_CLIENT_SECRET', 'IDP_TOKEN_URL']
+        oauth_status = {var: bool(env_vars.get(var)) for var in oauth_vars}
+        if all(oauth_status.values()):
+            st.success("✅ OAuth2 credentials available for deployment")
         else:
-            st.warning("⚠️ CDF_PROJECT or CDF_CLUSTER not found in environment")
+            st.warning(f"⚠️ Missing OAuth2 credentials: {[k for k, v in oauth_status.items() if not v]}")
+    else:
+        st.warning("⚠️ CDF_PROJECT or CDF_CLUSTER not found in environment")
     
     # Store the environment variables in session state
     if env_vars:

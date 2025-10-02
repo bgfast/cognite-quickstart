@@ -10,6 +10,35 @@ from . import state
 
 def render_step_1():
     st.header("⚙️ Environment Configuration")
+    
+    # Show previous download results if they exist
+    download_success, download_repo, download_message = state.get_download_results()
+    if download_success is not None:
+        if download_success:
+            st.success(f"✅ Repository downloaded successfully (previous): {download_repo}")
+            st.info(download_message)
+            
+            # Show that we can proceed to Step 2
+            extracted_path = state.get_extracted_path()
+            config_files = state.get_config_files()
+            if extracted_path and config_files:
+                st.success(f"✅ Found {len(config_files)} configuration files")
+                
+                if st.button("➡️ Continue to Step 2", type="primary"):
+                    state.set_workflow_step(2)
+                    st.rerun()
+                
+                # Option to download a different repository
+                if st.button("🔄 Download Different Repository", type="secondary"):
+                    # Clear download results to show selection again
+                    st.session_state['download_success'] = None
+                    st.rerun()
+                return
+        else:
+            st.error(f"❌ Previous download failed: {download_repo}")
+            st.error(download_message)
+    
+    # If no previous download or user wants to download different repo
     # Delegate environment handling to env_loader
     env_option, env_vars = env_loader.render_env_ui()
     st.caption("[Step 1] env loaded, awaiting repo inputs…")
@@ -26,19 +55,20 @@ def render_step_1():
         st.caption("[Step 1] no repo path yet")
         return
 
-    # No extraction needed - repo_path is already the extracted directory
-    st.success("✅ Repository downloaded successfully!")
-    
+    # Repository downloaded successfully
     config_files = github_service.find_config_files(repo_path)
     if not config_files:
         st.warning("⚠️ No config.*.yaml files found in the repository.")
+        state.set_download_results(False, f"{repo_owner}/{repo_name}", "No config files found")
         return
 
     # Store the repository path and config files
     state.set_extracted_path(repo_path)
     state.set_config_files(config_files)
     state.set_env_vars(env_vars)
-    st.caption(f"[Step 1] stored path and {len(config_files)} config(s)")
+    
+    # Store successful download results
+    state.set_download_results(True, f"{repo_owner}/{repo_name}", f"Found {len(config_files)} configuration files")
     
     # Debug: Show what env_vars were stored
     if st.session_state.get('debug_mode', False):
@@ -50,7 +80,7 @@ def render_step_1():
         else:
             st.warning("⚠️ **Debug**: No environment variables stored!")
     
-    st.success(f"✅ Found {len(config_files)} configuration files")
+    st.success(f"✅ Repository downloaded and {len(config_files)} configuration files found")
 
     if st.button("➡️ Continue to Step 2", type="primary"):
         st.caption("[Step 1] advancing to Step 2")
