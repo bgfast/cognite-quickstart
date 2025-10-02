@@ -18,30 +18,14 @@ def get_available_zip_files() -> List[Dict]:
         return []
     
     try:
-        # Search for all zip files in CDF with multiple approaches
-        zip_files_found = []
+        # Search for our specific app-packages zip files
+        all_files = CLIENT.files.list(limit=5000)  # Use higher limit to find all files
         
-        # Approach 1: Get all files and filter for zip files
-        all_files = CLIENT.files.list(limit=2000)  # Increase limit
-        zip_files_found = [f for f in all_files if f.name.endswith('.zip')]
+        # Filter for our specific app-packages zip files
+        our_zip_names = ['cognite-library-pattern-mode-beta.zip', 'cognite-quickstart-main.zip', 'cognite-samples-main.zip']
+        zip_files_found = [f for f in all_files if f.name in our_zip_names]
         
-        # If we still don't find our expected files, try searching for them specifically
-        expected_files = ['cognite-library-pattern-mode-beta.zip', 'cognite-quickstart-main.zip', 'cognite-samples-main.zip']
-        found_names = [f.name for f in zip_files_found]
-        missing_files = [name for name in expected_files if name not in found_names]
-        
-        if missing_files:
-            st.warning(f"⚠️ Expected files not found in first search: {missing_files}")
-            st.info("🔍 Trying alternative search methods...")
-            
-            # Try searching with different parameters
-            for missing_file in missing_files:
-                try:
-                    # Try to find by name pattern
-                    search_results = CLIENT.files.list(name=missing_file, limit=10)
-                    zip_files_found.extend([f for f in search_results if f.name == missing_file])
-                except:
-                    pass
+        st.info(f"🔍 Found {len(zip_files_found)} app-packages zip files out of {len(all_files)} total files")
         
         zip_files = []
         for file in zip_files_found:
