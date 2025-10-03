@@ -1,0 +1,8 @@
+externalId: github-repo-deployer
+name: GitHub Repo to CDF Deployer
+creator: brent.groom@cognitedata.com
+description: "v2.41 - Realistic toolkit-style output showing dynamic resource discovery and deployment"
+published: true
+theme: Light
+entrypoint: main.py
+dataSetExternalId: streamlit-github-deployer-dataset

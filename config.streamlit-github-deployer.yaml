@@ -1,0 +1,36 @@
+environment:
+  name: bgfast
+  project: bgfast
+  type: dev
+  selected:
+  ### ===========================================
+  ### STREAMLIT APPLICATIONS
+  ### ===========================================
+  - modules/streamlit-github-deployer       ### GitHub Repo to CDF Deployer Streamlit App
+
+variables:
+  # Environment Configuration
+  default_location: valhall                  # Name of the location
+  
+  # Authentication Configuration
+  superuser_sourceid: ${SUPERUSER_SOURCEID_ENV} # Source id for the super users in auth
+  my_user_identifier: ${USER_IDENTIFIER}     # User identifier for custom_access_management
+  readwrite_source_id: ${SUPERUSER_SOURCEID_ENV}
+
+  # CDF Configuration (populated from .env file)
+  CDF_PROJECT: ${CDF_PROJECT}
+  CDF_CLUSTER: ${CDF_CLUSTER}
+  CDF_URL: https://${CDF_CLUSTER}.cognitedata.com
+  
+  # IDP Configuration
+  IDP_CLIENT_ID: ${IDP_CLIENT_ID}
+  IDP_CLIENT_SECRET: ${IDP_CLIENT_SECRET}
+  IDP_SCOPES: ${IDP_SCOPES}
+  IDP_TENANT_ID: ${IDP_TENANT_ID}
+  IDP_TOKEN_URL: ${IDP_TOKEN_URL}
+  
+  # Function Configuration
+  function_clientId: ${FUNCTION_CLIENT_ID}
+  function_clientSecret: ${FUNCTION_CLIENT_SECRET}
+  transformation_clientId: ${TRANSFORMATION_CLIENT_ID}
+  transformation_clientSecret: ${TRANSFORMATION_CLIENT_SECRET}

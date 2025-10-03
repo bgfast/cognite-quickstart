@@ -1,0 +1,4 @@
+[module]
+name = "test-toolkit-api"
+description = "Test module for cognite-toolkit library API compatibility"
+version = "1.0.0"
