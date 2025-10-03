@@ -1,0 +1,3 @@
+externalId: {{default_location}}_transformation
+name: pipeline for {{default_location}} transformation
+description: This dataset used for transformation for {{default_location}}

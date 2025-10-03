@@ -1,0 +1,4 @@
+externalId: {{ default_location }}_rest_destination
+credentials:
+  clientId: {{ IDP_CLIENT_ID }}
+  clientSecret: {{ IDP_CLIENT_SECRET }}

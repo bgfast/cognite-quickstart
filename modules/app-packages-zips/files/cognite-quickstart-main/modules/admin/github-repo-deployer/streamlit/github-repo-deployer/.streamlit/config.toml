@@ -1,0 +1,8 @@
+[server]
+# Disable file watching in CDF environment
+fileWatcherType = "none"
+
+[runner]
+# Disable file watching
+fastReruns = false
+

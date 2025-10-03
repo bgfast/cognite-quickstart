@@ -1,0 +1,16 @@
+space: EDM-COR-ALL-NEAT
+externalId: NeatBasic
+name: Neat Basic Container
+properties:
+  newString:
+    type:
+      list: false
+      collation: ucs_basic
+      type: text
+    immutable: false
+    nullable: true
+    autoIncrement: false
+    name: New String
+constraints: {}
+indexes: {}
+usedFor: all

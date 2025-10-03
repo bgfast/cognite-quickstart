@@ -26,9 +26,6 @@ def render_step_1():
             if extracted_path and config_files:
                 st.success(f"✅ Found {len(config_files)} configuration files")
                 
-                if st.button("➡️ Continue to Step 2", type="primary"):
-                    state.set_workflow_step(2)
-                    st.rerun()
                 
                 # Option to download a different repository
                 if st.button("🔄 Download Different Repository", type="secondary"):
@@ -46,8 +43,16 @@ def render_step_1():
         return
     repo_owner, repo_name, selected_branch, access_type = repo_input
 
+    # Get CLIENT from session state
+    CLIENT = st.session_state.get('cdf_client')
+    
+    # Debug CLIENT status
+    st.sidebar.write(f"🔍 ui_steps: CLIENT from session={bool(CLIENT)}")
+    if CLIENT:
+        st.sidebar.write(f"🔍 ui_steps: CLIENT type={type(CLIENT).__name__}")
+    
     # Download repository (returns directory path, not ZIP path)
-    repo_path = github_service.render_download_section(repo_owner, repo_name, selected_branch, access_type)
+    repo_path = github_service.render_download_section(repo_owner, repo_name, selected_branch, access_type, CLIENT)
     if not repo_path:
         return
 
@@ -68,9 +73,6 @@ def render_step_1():
     
     st.success(f"✅ Repository downloaded and {len(config_files)} configuration files found")
 
-    if st.button("➡️ Continue to Step 2", type="primary"):
-        state.set_workflow_step(2)
-        st.rerun()
 
 def render_step_2():
     st.header("📋 Step 2: Select Configuration")
@@ -78,9 +80,6 @@ def render_step_2():
     config_files = state.get_config_files()
     if not extracted_path:
         st.warning("No repository path available. Go back to Step 1.")
-        if st.button("⬅️ Back to Download"):
-            state.set_workflow_step(1)
-            st.rerun()
         return
     
     # Always show basic debug info so the user sees progress immediately
@@ -143,15 +142,6 @@ def render_step_2():
     st.caption(f"Full path: {selected_path}")
 
     # Navigation buttons
-    col1, col2 = st.columns([1, 1])
-    with col1:
-        if st.button("⬅️ Back to Download"):
-            state.set_workflow_step(1)
-            st.rerun()
-    with col2:
-        if st.button("➡️ Continue to Build", type="primary"):
-            state.set_workflow_step(3)
-            st.rerun()
 
 def render_step_3():
     st.subheader("🔨 Step 3: Build Package")
@@ -314,94 +304,110 @@ def render_step_4():
             st.rerun()
     
     with col2:
-        # Only show deploy button after dry-run is completed
-        dry_run_completed = st.session_state.get('show_dry_run', False)
-        if st.button("🚀 Deploy to CDF", type="primary", disabled=not dry_run_completed):
-            if not dry_run_completed:
-                st.warning("⚠️ Please run dry-run first to preview changes")
-                return
+        # Deploy button is shown after dry-run section
+        st.write("")  # Placeholder for layout
                 
     # Handle dry-run
     if st.session_state.get('show_dry_run', False):
         st.subheader("🔍 Deployment Preview (Dry Run)")
         
+        # Get SaaS client
+        client = st.session_state.get('cdf_client')
+        if not client:
+            st.error("❌ No CDF client available. Please refresh the app.")
+            return
+            
         with st.spinner("Running dry-run to preview changes..."):
-            from services.toolkit_service import ToolkitService
-            toolkit_service = ToolkitService()
-            
-            # Run dry-run (this should be implemented in toolkit_service)
-            st.info("🔍 **Dry-run would preview deployment changes here**")
-            st.info("💡 **Next**: Implement actual dry-run in toolkit_service")
-            
-        st.success("✅ Dry-run completed - you can now proceed with deployment")
-        
-    # Handle actual deployment (only if dry-run was done)
-    if st.button("🚀 Deploy to CDF", type="primary") and st.session_state.get('show_dry_run', False):
-        selected_env = state.get_selected_env() or "weather"
-        st.info(f"🚀 Deploying with environment: {selected_env}")
-        
-        # Debug environment variables
-        if st.session_state.get('debug_mode', False):
-            oauth_vars = ['IDP_CLIENT_ID', 'IDP_CLIENT_SECRET', 'IDP_TOKEN_URL']
-            available_oauth = {var: bool(os.environ.get(var)) for var in oauth_vars}
-            st.info(f"🔐 Environment OAuth2 check: {available_oauth}")
-            
-            env_vars_check = {var: bool(env_vars.get(var)) if env_vars else False for var in oauth_vars}
-            st.info(f"🔐 Passed env_vars OAuth2 check: {env_vars_check}")
-        
-        # Always show verbose output in debug mode
-        if st.session_state.get('debug_mode', False):
-            st.subheader("🔍 Deploy Process (Debug Mode)")
-            
-            # Capture verbose logging
-            import io
-            from contextlib import redirect_stdout, redirect_stderr
-            
-            # Create string buffers to capture output
-            stdout_buffer = io.StringIO()
-            stderr_buffer = io.StringIO()
-            
             try:
-                with redirect_stdout(stdout_buffer), redirect_stderr(stderr_buffer):
-                    ok, out, err = toolkit_service.deploy_project(extracted_path, env_vars, env_name=selected_env)
+                # Get environment and client info
+                selected_env = state.get_selected_env() or "weather"
+                project = client.config.project
+                cluster = client.config.base_url
+
+                st.info(f"🔗 Connected to project '{project}' on {cluster}")
+                st.info(f"📁 Analyzing: {extracted_path}")
+                st.info(f"📋 Environment: {selected_env}")
+
+                # Capture dry-run output in a list for display
+                dry_run_output = []
+                def capture_logger(msg):
+                    dry_run_output.append(str(msg))
+                    st.write(msg)  # Also show in real-time
                 
-                # Show captured output
-                captured_stdout = stdout_buffer.getvalue()
-                captured_stderr = stderr_buffer.getvalue()
+                # Call real dry-run comparison using toolkit library
+                from core.toolkit_operations import dry_run_project as core_dry_run
+                ok, out, err = core_dry_run(client, extracted_path, env_vars, env_name=selected_env, verbose=True, logger=capture_logger)
                 
-                if captured_stdout:
-                    st.subheader("📄 Deploy Process Output")
-                    st.code(captured_stdout, language="text")
-                if captured_stderr:
-                    st.subheader("📄 Deploy Process Errors")
-                    st.code(captured_stderr, language="text")
+                if not ok:
+                    st.error(f"❌ Dry-run failed: {err}")
+                    if dry_run_output:
+                        st.subheader("📄 Dry-run Output")
+                        st.code("\n".join(dry_run_output), language="text")
+                    return
+                else:
+                    st.success("✅ Dry-run completed - real comparison with live CDF system")
+                    if dry_run_output:
+                        st.subheader("📊 Dry-run Comparison Results")
+                        st.code("\n".join(dry_run_output), language="text")
                 
             except Exception as e:
-                st.error(f"❌ Deploy process failed: {e}")
-                ok, out, err = False, "", str(e)
-        else:
-            # Non-debug mode
-            with st.spinner("Deploying to CDF..."):
-                ok, out, err = toolkit_service.deploy_project(extracted_path, env_vars, env_name=selected_env)
-        
-        # Store and show results
-        state.set_deploy_results(ok, out, err)
-        
-        if ok:
-            st.success("✅ Deployment completed successfully")
-            if out and st.session_state.get('debug_mode', False):
-                st.subheader("📄 Deploy Output")
-                st.code(out, language="text")
+                st.error(f"❌ Dry-run failed: {e}")
+                return
             
-            st.info("✅ Deploy complete! Click Step 5 tab above to verify deployment.")
-        else:
-            st.error("❌ Deployment failed - fix errors and try again")
-            if err:
-                st.subheader("❌ Deploy Error Details")
-                st.code(err, language="text")
-            if out:
-                st.subheader("📄 Deploy Output")
-                st.code(out, language="text")
+        # Show deploy button after successful dry-run
+        if st.button("🚀 Deploy to CDF", type="primary", key="deploy_button_main"):
+            st.session_state['show_deploy'] = True
+            st.rerun()
+        
+        # Handle actual deployment if deploy button was clicked
+        if st.session_state.get('show_deploy', False):
+            st.subheader("🚀 Deploying to CDF")
+            selected_env = state.get_selected_env() or "weather"
+            
+            # Get SaaS client
+            client = st.session_state.get('cdf_client')
+            if not client:
+                st.error("❌ No CDF client available. Please refresh the app.")
+                return
+                
+            with st.spinner("Deploying to CDF using real toolkit library..."):
+                try:
+                    # Get client info
+                    project = client.config.project
+                    cluster = client.config.base_url
+                    
+                    st.info(f"🔗 Connected to project '{project}' on {cluster}")
+                    st.info(f"📁 Deploying: {extracted_path}")
+                    st.info(f"📋 Environment: {selected_env}")
+                    
+                    # Capture deployment output in a list for display
+                    deploy_output = []
+                    def capture_deploy_logger(msg):
+                        deploy_output.append(str(msg))
+                        st.write(msg)  # Also show in real-time
+                    
+                    # Call real deployment using toolkit library
+                    from core.toolkit_operations import deploy_project as core_deploy
+                    ok, out, err = core_deploy(client, extracted_path, env_vars, env_name=selected_env, verbose=True, logger=capture_deploy_logger)
+                    
+                    if ok:
+                        st.success("✅ Deployment completed successfully!")
+                        if deploy_output:
+                            st.subheader("📊 Deployment Results")
+                            st.code("\n".join(deploy_output), language="text")
+                        st.info("✅ Deploy complete! Click Step 5 tab above to verify deployment.")
+                    else:
+                        st.error(f"❌ Deployment failed: {err}")
+                        if deploy_output:
+                            st.subheader("📄 Deployment Output")
+                            st.code("\n".join(deploy_output), language="text")
+                    
+                    # Store results
+                    state.set_deploy_results(ok, out, err)
+                    
+                except Exception as e:
+                    st.error(f"❌ Deployment failed: {e}")
+                    state.set_deploy_results(False, "", str(e))
 
 def render_step_5():
     st.subheader("✅ Step 5: Deployment Complete")

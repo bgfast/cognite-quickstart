@@ -2,7 +2,7 @@ import streamlit as st
 
 # Set page config FIRST (must be before any other Streamlit commands or imports that use Streamlit)
 st.set_page_config(
-    page_title="GitHub Repo to CDF Deployer v1.95",
+    page_title="GitHub Repo to CDF Deployer v2.35",
     page_icon="🚀",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -29,7 +29,6 @@ from services import ui_steps
 
 # --- Global Initialization ---
 CLIENT = None
-IS_LOCAL_ENV = False
 
 # --- Logging Setup ---
 LOGGER_NAME = "github_repo_deployer"
@@ -67,61 +66,82 @@ def load_env_from_file() -> None:
         logger.exception(f"Failed to load env file {ENV_FILE_PATH}: {e}")
 
 def initialize_cdf_client():
-    """Initialize CogniteClient with proper error handling for local/SaaS environments"""
-    global CLIENT, IS_LOCAL_ENV
+    """Initialize CogniteClient - try SaaS first, then local with env vars"""
+    global CLIENT
     
+    from cognite.client import CogniteClient
+    
+    # Debug environment info
+    if st.session_state.get('debug_mode', False):
+        import platform
+        st.sidebar.write(f"🔍 Python: {platform.python_version()}")
+        st.sidebar.write(f"🔍 Platform: {platform.system()}")
+        st.sidebar.write(f"🔍 CDF_PROJECT env: {os.environ.get('CDF_PROJECT', 'Not set')}")
+    
+    # Method 1: Try SaaS CogniteClient (no parameters)
     try:
-        # First try SaaS connection (CogniteClient with no params)
+        CLIENT = CogniteClient()
+        log_debug("✅ CDF client initialized via SaaS")
+        st.sidebar.success("✅ SaaS CogniteClient() successful")
         try:
-            from cognite.client import CogniteClient
-            CLIENT = CogniteClient()
-            IS_LOCAL_ENV = False
-            log_debug("CDF client initialized successfully via SaaS connection")
-            return
-        except Exception as saas_error:
-            log_debug(f"SaaS connection failed, trying OAuth2: {saas_error}")
+            # Try to get project info for debug (but don't fail if this doesn't work)
+            st.sidebar.text(f"Project: {CLIENT.config.project}")
+        except:
+            pass
+        return
+    except Exception as saas_error:
+        error_type = type(saas_error).__name__
+        error_msg = str(saas_error)
+        log_debug(f"❌ SaaS CogniteClient failed: {error_type}: {error_msg}")
+        st.sidebar.error(f"❌ SaaS failed: {error_type}")
+        st.sidebar.text(f"Error: {error_msg}")
+    
+    # Method 2: Try local CogniteClient with environment variables
+    try:
+        from cognite.client import ClientConfig
+        from cognite.client.credentials import OAuthClientCredentials
         
-        # Fallback to OAuth2 for local development
+        config = ClientConfig(
+            client_name="streamlit-github-deployer",
+            base_url=f"https://{os.environ['CDF_CLUSTER']}.cognitedata.com",
+            project=os.environ['CDF_PROJECT'],
+            credentials=OAuthClientCredentials(
+                token_url=os.environ['IDP_TOKEN_URL'],
+                client_id=os.environ['IDP_CLIENT_ID'],
+                client_secret=os.environ['IDP_CLIENT_SECRET'],
+                scopes=[f"https://{os.environ['CDF_CLUSTER']}.cognitedata.com/.default"]
+            )
+        )
+        CLIENT = CogniteClient(config)
+        log_debug("✅ CDF client initialized via OAuth2")
+        st.sidebar.success("✅ OAuth2 CogniteClient successful")
+        try:
+            # Try to get project info for debug (but don't fail if this doesn't work)
+            st.sidebar.text(f"Project: {CLIENT.config.project}")
+        except:
+            pass
+        return
+    except Exception as oauth_error:
+        error_type = type(oauth_error).__name__
+        error_msg = str(oauth_error)
+        log_debug(f"❌ OAuth2 CogniteClient failed: {error_type}: {error_msg}")
+        st.sidebar.error(f"❌ OAuth2 failed: {error_type}")
+        st.sidebar.text(f"Error: {error_msg}")
+        # Show which env vars are missing
         required_vars = ['CDF_PROJECT', 'CDF_CLUSTER', 'IDP_CLIENT_ID', 'IDP_CLIENT_SECRET', 'IDP_TOKEN_URL']
         missing_vars = [var for var in required_vars if not os.environ.get(var)]
-        
         if missing_vars:
-            CLIENT = None
-            IS_LOCAL_ENV = True
-            log_debug(f"Missing OAuth2 credentials: {missing_vars}")
-            if st.session_state.get('debug_mode', False):
-                st.warning(f"⚠️ Missing OAuth2 credentials: {missing_vars}")
-        else:
-            # Try to initialize CDF client with OAuth2
-            from cognite.client import CogniteClient, ClientConfig
-            from cognite.client.credentials import OAuthClientCredentials
-            
-            config = ClientConfig(
-                client_name="streamlit-github-deployer",
-                base_url=f"https://{os.environ['CDF_CLUSTER']}.cognitedata.com",
-                project=os.environ['CDF_PROJECT'],
-                credentials=OAuthClientCredentials(
-                    token_url=os.environ['IDP_TOKEN_URL'],
-                    client_id=os.environ['IDP_CLIENT_ID'],
-                    client_secret=os.environ['IDP_CLIENT_SECRET'],
-                    scopes=[f"https://{os.environ['CDF_CLUSTER']}.cognitedata.com/.default"]
-                )
-            )
-            
-            CLIENT = CogniteClient(config)
-            IS_LOCAL_ENV = False
-            log_debug("CDF client initialized successfully with OAuth2")
-                
-    except Exception as e:
-        CLIENT = None
-        IS_LOCAL_ENV = True
-        if st.session_state.get('debug_mode', False):
-            st.warning(f"⚠️ CDF connection failed: {e}")
-        log_debug(f"CDF client init failed: {e}")
+            st.sidebar.text(f"Missing env vars: {missing_vars}")
+    
+    # Both methods failed
+    CLIENT = None
+    error_msg = "❌ Failed to initialize CogniteClient via SaaS or OAuth2"
+    log_debug(error_msg)
+    st.sidebar.error(error_msg)
+    st.error(error_msg)
 
-# Load env and initialize CDF client on import
+# Load env on import
 load_env_from_file()
-initialize_cdf_client()
 
 def main():
     # Reload/run tracking
@@ -144,9 +164,32 @@ def main():
     }
     log_debug(f"App reload. State snapshot: {snapshot}")
 
+    # Initialize CDF client directly (like your working code)
+    st.sidebar.write("🔍 About to initialize CDF client...")
+    from cognite.client import CogniteClient
+    try:
+        CLIENT = CogniteClient()
+        st.sidebar.success("✅ SaaS CogniteClient() successful")
+        st.sidebar.write(f"🔍 After init: CLIENT={bool(CLIENT)}")
+        
+        # Test data_modeling access immediately
+        try:
+            test_instances = CLIENT.data_modeling.instances.list(limit=1)
+            st.sidebar.success("✅ data_modeling API accessible")
+        except Exception as dm_error:
+            st.sidebar.error(f"❌ data_modeling failed: {dm_error}")
+            
+    except Exception as e:
+        CLIENT = None
+        st.sidebar.error(f"❌ CogniteClient failed: {e}")
+    
+    # Store CLIENT in session state for cross-module access
+    st.session_state['cdf_client'] = CLIENT
+    st.sidebar.write(f"🔍 Stored in session: {bool(st.session_state.get('cdf_client'))}")
+
     st.title("🚀 GitHub Repo to CDF Deployer")
     st.markdown("Download files from public GitHub repositories and deploy them using the Cognite toolkit")
-    st.caption("Version 1.95 - CDF-integrated repository deployment with clean UI")
+    st.caption("Version 2.41 - Realistic toolkit-style output showing dynamic resource discovery and deployment")
     
     # Initialize workflow step
     if 'workflow_step' not in st.session_state:

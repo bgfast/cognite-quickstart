@@ -1,0 +1,3 @@
+# Base requirements for the function
+# cognite-toolkit will be installed dynamically in the function
+# to test if it works in the Functions environment
