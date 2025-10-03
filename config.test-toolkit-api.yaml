@@ -1,0 +1,11 @@
+environment:
+  name: bgfast
+  project: bgfast
+  validation-type: dev
+  selected:
+    - modules/test-toolkit-api
+
+variables:
+  # Test variables for toolkit API testing
+  test_space: test-toolkit-api
+  test_dataset: streamlit-test-toolkit-dataset
