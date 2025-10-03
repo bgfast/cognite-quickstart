@@ -4,14 +4,15 @@ Toolkit Service - Handles Cognite Toolkit operations using unified core operatio
 import os
 import streamlit as st
 from typing import Optional, Tuple, Dict, Any
-from core.toolkit_operations import build_project, deploy_project
+from core.toolkit_operations import build_project, deploy_project, dry_run_project
 
 
 class ToolkitService:
     """Service for Cognite Toolkit operations"""
     
     def __init__(self):
-        self.toolkit_available = self._check_toolkit_availability()
+        # SaaS Streamlit cannot run subprocess/CLI; force library mode
+        self.toolkit_available = False
     
     def _check_toolkit_availability(self) -> bool:
         """Check if Cognite Toolkit is available"""
@@ -50,62 +51,51 @@ class ToolkitService:
             return False, "", str(e)
     
     def build_project(self, project_path: str, env_vars: Dict[str, str] = None, env_name: str = "weather") -> Tuple[bool, str, str]:
-        """Build project using unified core operations (same as test framework)"""
+        """Build project using toolkit library (browser-compatible)."""
         try:
-            # Merge environment variables with loaded env file
             merged_env_vars = os.environ.copy()
             if env_vars:
                 merged_env_vars.update(env_vars)
             
-            # Use unified build function with verbose logging
+            # Always use Python implementation in SaaS
             success, output, error = build_project(
-                project_path, 
-                merged_env_vars, 
+                project_path,
+                merged_env_vars,
                 env_name=env_name,
                 verbose=True,
-                logger=st.info
+                logger=print,
             )
-            
             if success:
-                st.success("✅ Build completed successfully!")
+                st.success("✅ Build completed successfully")
                 return True, output, ""
-            else:
-                st.error(f"❌ Build failed: {error}")
-                return False, output, error
-                
+            st.error(f"❌ Build failed: {error}")
+            return False, output, error
+
         except Exception as e:
             st.error(f"❌ Build failed: {e}")
             return False, "", str(e)
     
     def deploy_project(self, project_path: str, env_vars: Dict[str, str] = None, env_name: str = "weather") -> Tuple[bool, str, str]:
-        """Deploy project using unified core operations (same as test framework)"""
+        """Deploy project using toolkit library (browser-compatible / SaaS client)."""
         try:
-            # Merge environment variables with loaded env file
             merged_env_vars = os.environ.copy()
             if env_vars:
                 merged_env_vars.update(env_vars)
             
-            # Debug: show what OAuth2 vars we have
-            oauth_vars = ['IDP_CLIENT_ID', 'IDP_CLIENT_SECRET', 'IDP_TOKEN_URL']
-            available_oauth = {var: bool(merged_env_vars.get(var)) for var in oauth_vars}
-            st.info(f"🔐 OAuth2 credentials check: {available_oauth}")
-            
-            # Use unified deploy function with verbose logging
+            # Always use Python implementation in SaaS
             success, output, error = deploy_project(
-                project_path, 
-                merged_env_vars, 
+                project_path,
+                merged_env_vars,
                 env_name=env_name,
                 verbose=True,
-                logger=st.info
+                logger=print,
             )
-            
             if success:
-                st.success("✅ Deployment completed successfully!")
+                st.success("✅ Deployment completed successfully")
                 return True, output, ""
-            else:
-                st.error(f"❌ Deployment failed: {error}")
-                return False, output, error
-                
+            st.error(f"❌ Deployment failed: {error}")
+            return False, output, error
+
         except Exception as e:
             st.error(f"❌ Deploy failed: {e}")
             return False, "", str(e)

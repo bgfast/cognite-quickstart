@@ -1,0 +1,6 @@
+- name: Hourly (streaming)
+  functionExternalId: oid_dp_sync-dm
+  cronExpression: "0 * * * *"
+  authentication:
+    clientId: ${IDP_CLIENT_ID}
+    clientSecret: ${IDP_CLIENT_SECRET}

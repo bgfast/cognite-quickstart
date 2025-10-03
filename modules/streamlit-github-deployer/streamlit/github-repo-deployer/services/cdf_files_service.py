@@ -8,15 +8,19 @@ to downloading directly from GitHub.
 import streamlit as st
 import tempfile
 import os
+from datetime import datetime
 from typing import List, Dict, Optional, Tuple
 
 
-def get_available_zip_files(client, is_local_env) -> List[Dict]:
+def get_available_zip_files() -> List[Dict]:
     """Get list of available zip files from app-packages space using data modeling API"""
-    if not client:
-        return []
+    
+    # Create client directly here like your working code
+    from cognite.client import CogniteClient
+    client = CogniteClient()
     
     try:
+        
         # Use data modeling API to find zip file instances in app-packages space
         instances = client.data_modeling.instances.list(
             instance_type='node',
@@ -26,7 +30,6 @@ def get_available_zip_files(client, is_local_env) -> List[Dict]:
         
         # Filter for zip file instances (exclude the app-package node definition)
         zip_instances = [inst for inst in instances if inst.external_id.endswith('.zip')]
-        
         
         # Convert instances to file info for the UI
         # We need to get the actual file objects to have the file IDs for download
@@ -52,7 +55,7 @@ def get_available_zip_files(client, is_local_env) -> List[Dict]:
                         'external_id': instance.external_id,
                         'name': filename,
                         'repo_name': repo_name,
-                        'uploaded_time': instance.created_time,
+                        'uploaded_time': datetime.fromtimestamp(file_obj.uploaded_time / 1000),
                         'metadata': file_obj.metadata or {},
                         'mime_type': file_obj.mime_type,
                         'uploaded': file_obj.uploaded,
@@ -63,18 +66,15 @@ def get_available_zip_files(client, is_local_env) -> List[Dict]:
         return sorted(zip_files, key=lambda x: x['uploaded_time'], reverse=True)
         
     except Exception as e:
-        st.error(f"Failed to fetch zip files from CDF: {e}")
+        st.error(f"❌ Failed to fetch zip files from CDF: {e}")
+        st.exception(e)
         return []
 
 
-def render_cdf_zip_selection(client, is_local_env) -> Optional[Dict]:
+def render_cdf_zip_selection() -> Optional[Dict]:
     """Render UI for selecting zip files from CDF"""
     
-    if not client or is_local_env:
-        st.warning("⚠️ CDF connection not available.")
-        return None
-    
-    zip_files = get_available_zip_files(client, is_local_env)
+    zip_files = get_available_zip_files()
     
     if not zip_files:
         st.info("📭 No zip files found in CDF.")
@@ -138,11 +138,12 @@ def render_cdf_zip_selection(client, is_local_env) -> Optional[Dict]:
     return None
 
 
-def download_zip_from_cdf(file_info: Dict, client) -> Optional[str]:
+def download_zip_from_cdf(file_info: Dict) -> Optional[str]:
     """Download zip file from CDF - handles both regular files and data modeling files"""
-    if not client:
-        st.error("CDF client not available")
-        return None
+    
+    # Create client directly here like your working code
+    from cognite.client import CogniteClient
+    client = CogniteClient()
     
     try:
         with st.status(f"📥 Downloading {file_info['name']} from CDF...", expanded=True) as status:

@@ -1,0 +1,22 @@
+space: EDM-COR-ALL-NEAT
+externalId: NeatBasic
+name: Neat Basic
+description: Represents files
+implements:
+- space: cdf_cdm
+  externalId: CogniteSourceable
+  version: v1
+  type: view
+- space: cdf_cdm
+  externalId: CogniteDescribable
+  version: v1
+  type: view
+version: v0_0_1
+properties:
+  newString:
+    container:
+      space: EDM-COR-ALL-NEAT
+      externalId: NeatBasic
+      type: container
+    containerPropertyIdentifier: newString
+    name: New String

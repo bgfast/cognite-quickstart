@@ -1,0 +1,17 @@
+externalId: valhall-dm
+name: 'valhall-dm'
+description: 'Data modeling'
+dataModels:
+  - externalId: CogniteCore
+    space: cdf_cdm
+    version: v1
+instanceSpaces:
+  - valhall-events
+  - valhall-assets
+  - valhall-files
+  - valhall-tags
+  - valhall-three_d
+dataModelingType: DATA_MODELING_ONLY
+#scene: 
+#  externalId: {{ scene_externalId }}
+#  space: {{ three_d_InstanceSpace }}

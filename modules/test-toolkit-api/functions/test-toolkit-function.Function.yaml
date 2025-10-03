@@ -1,0 +1,11 @@
+- name: Test Toolkit Function
+  externalId: test-toolkit-function
+  owner: brent.groom@cognitedata.com
+  description: Function to test if cognite-toolkit library can be installed and used in Functions environment
+  cpu: 0.5
+  memory: 1.5
+  metadata:
+    version: "1.0"
+    purpose: "Test cognite-toolkit installation and CLI commands"
+  runtime: py311
+  functionPath: handler.py
