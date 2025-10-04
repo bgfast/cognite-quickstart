@@ -79,23 +79,25 @@ except Exception as e:
 # Step 3: Create notebook file
 print("Step 3/3: Creating notebook file...")
 try:
+    import os
+    
+    # Write as .txt first to avoid Jupyter auto-open blocking the write
+    temp_filename = "toolkit_bootstrap.txt"
     notebook_filename = "toolkit_bootstrap.ipynb"
     
-    with open(notebook_filename, 'w', encoding='utf-8') as f:
+    print(f"   Writing file...")
+    with open(temp_filename, 'w', encoding='utf-8') as f:
         json.dump(notebook_content, f, indent=2)
     
-    # Wait for file system to sync (important in CDF Jupyter)
-    import time
-    import os
-    print(f"   Writing file...")
-    time.sleep(2)  # Give file system time to sync
+    # Rename to .ipynb
+    os.rename(temp_filename, notebook_filename)
     
     # Verify file exists and has content
     if os.path.exists(notebook_filename):
         file_size = os.path.getsize(notebook_filename)
         print(f"✅ Notebook created: {notebook_filename}")
         print(f"   Size: {file_size:,} bytes")
-        print(f"   Location: {os.path.abspath(notebook_filename)}")
+        print(f"   Cells: {len(notebook_content.get('cells', []))}")
     else:
         print("⚠️  File created but not yet visible in file system")
         print("   Wait a few seconds and refresh your file browser")
@@ -111,17 +113,15 @@ print("🎉 MINI BOOTSTRAP COMPLETE!")
 print("=" * 60)
 print()
 print("📋 Next Steps:")
-print(f"   1. **WAIT 3-5 SECONDS** for file to appear in Jupyter")
-print(f"   2. Refresh your Jupyter file browser if needed")
-print(f"   3. Open '{notebook_filename}' in Jupyter")
-print("   4. Review the cells to understand what they do")
-print("   5. Run the cells one-by-one to deploy")
+print(f"   1. Open 'toolkit_bootstrap.ipynb' from your Jupyter file browser")
+print("   2. Review the 13 cells to understand what they do")
+print("   3. Run the cells one-by-one to deploy")
 print()
 print("📚 What the notebook will deploy:")
 print("   • Dataset: streamlit-test-toolkit-dataset")
 print("   • Function: test-toolkit-function (runs real cdf commands)")
 print("   • Streamlit: test-toolkit-api (UI for testing)")
 print()
-print("💡 Tip: If notebook appears empty, close and reopen it!")
+print("💡 Tip: Read the markdown cells for detailed explanations!")
 print()
 
