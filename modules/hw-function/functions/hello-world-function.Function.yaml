@@ -1,0 +1,11 @@
+- name: Hello World Function
+  externalId: hello-world-function
+  owner: brent.groom@cognitedata.com
+  description: Simple hello world function that demonstrates function-streamlit integration
+  cpu: 0.25
+  memory: 0.5
+  metadata:
+    version: "1.0"
+    purpose: "Demonstrate function call and response pattern"
+  runtime: py311
+  functionPath: handler.py

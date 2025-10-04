@@ -1,0 +1,4 @@
+[module]
+name = "hw-function"
+description = "Hello World demonstration of Cognite Function and Streamlit integration"
+version = "1.0.0"
