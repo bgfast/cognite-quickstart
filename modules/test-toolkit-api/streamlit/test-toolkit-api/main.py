@@ -4,11 +4,23 @@ Minimal Streamlit Test for Cognite Toolkit API
 Tests if the toolkit library API works in SaaS environment
 """
 
+# Version tracking for deployment verification
+VERSION = "2025.01.03.v15"  # Update this when deploying changes
+
 import streamlit as st
 import sys
 from pathlib import Path
 import traceback
 import time
+from datetime import datetime
+
+
+# Global cached client to avoid re-initialization delays
+@st.cache_resource
+def get_cognite_client():
+    """Initialize and cache CogniteClient for instant button responses"""
+    from cognite.client import CogniteClient
+    return CogniteClient()
 
 
 def test_toolkit_imports():
@@ -115,110 +127,7 @@ def test_trial_2_cognite_sdk_direct():
 
 def test_trial_3_cognite_functions():
     """TRIAL 3: Use Cognite Functions to run real toolkit library"""
-    st.subheader("🧪 TRIAL 3: Cognite Functions Approach")
-    
-    # ============================================================================
-    # TRIAL 3: Cognite Functions with real toolkit (TESTING - Oct 3, 2024)
-    # ============================================================================
-    # Approach: Deploy Cognite Function that can install cognite-toolkit
-    # Goal: Run real toolkit commands (build, dry-run, deploy) in function environment
-    # Benefits: Full Python environment, subprocess support, pip install works
-    # Status: TESTING
-    # ============================================================================
-    
-    st.info("🚀 **BREAKTHROUGH APPROACH**: Use Cognite Functions for real toolkit!")
-    st.info("💡 **Theory**: Functions have full Python environment, can install toolkit")
-    
-    # Show the function code we would deploy
-    st.subheader("📝 Proposed Function Code")
-    
-    function_code = '''
-def handle(client, data):
-    """
-    Cognite Function to run real toolkit commands
-    """
-    import subprocess
-    import os
-    import tempfile
-    
-    # Install cognite-toolkit (this should work in Functions!)
-    try:
-        subprocess.run(["pip", "install", "cognite-toolkit"], check=True)
-        print("✅ cognite-toolkit installed successfully")
-    except Exception as e:
-        return {"error": f"Failed to install toolkit: {e}"}
-    
-    # Test toolkit commands
-    results = {}
-    
-    # Create temp directory for testing
-    with tempfile.TemporaryDirectory() as temp_dir:
-        os.chdir(temp_dir)
-        
-        # Test 1: cdf build (expect error but prove command exists)
-        try:
-            result = subprocess.run(["cdf", "build"], 
-                                  capture_output=True, text=True, timeout=30)
-            results["build"] = {
-                "returncode": result.returncode,
-                "stdout": result.stdout,
-                "stderr": result.stderr
-            }
-        except Exception as e:
-            results["build"] = {"error": str(e)}
-        
-        # Test 2: cdf deploy --dry-run (expect error but prove command exists)  
-        try:
-            result = subprocess.run(["cdf", "deploy", "--dry-run"], 
-                                  capture_output=True, text=True, timeout=30)
-            results["dry_run"] = {
-                "returncode": result.returncode,
-                "stdout": result.stdout,
-                "stderr": result.stderr
-            }
-        except Exception as e:
-            results["dry_run"] = {"error": str(e)}
-        
-        # Test 3: cdf deploy (expect error but prove command exists)
-        try:
-            result = subprocess.run(["cdf", "deploy"], 
-                                  capture_output=True, text=True, timeout=30)
-            results["deploy"] = {
-                "returncode": result.returncode,
-                "stdout": result.stdout,
-                "stderr": result.stderr
-            }
-        except Exception as e:
-            results["deploy"] = {"error": str(e)}
-    
-    return {
-        "success": True,
-        "message": "Toolkit commands tested",
-        "results": results
-    }
-'''
-    
-    st.code(function_code, language="python")
-    
-    st.subheader("🎯 Test Goals")
-    st.info("1. ✅ Prove `pip install cognite-toolkit` works in Functions")
-    st.info("2. ✅ Prove `cdf build` command exists and can be called")
-    st.info("3. ✅ Prove `cdf deploy --dry-run` command exists")
-    st.info("4. ✅ Prove `cdf deploy` command exists")
-    st.warning("⚠️ Commands will error (no config/files) but that's expected")
-    
-    st.subheader("📋 Function Deployment & Testing")
-    
-    # Function deployment instructions
-    with st.expander("🚀 How to Deploy the Function"):
-        st.markdown("""
-        **Manual deployment steps:**
-        1. Go to CDF → Integrate → Functions
-        2. Create new function: `test-toolkit-function`
-        3. Copy the code above into the function
-        4. Set timeout to 300 seconds (5 minutes)
-        5. Deploy the function
-        """)
+    st.subheader("🧪 Test Toolkit via Cognite Functions")
     
     # Function calling interface
     st.subheader("📞 Call Function")
@@ -230,15 +139,50 @@ def handle(client, data):
             st.error("Please enter a function name")
             return
         
-        # Immediate feedback
-        st.success("🚀 Button clicked! Initializing function call...")
+        # ========================================================================
+        # ATTEMPTS TO MAKE BUTTON FEEDBACK INSTANT:
+        # ========================================================================
+        # v3 (2025.01.03): Direct st.success() after button - FAILED (60s delay)
+        #   - Issue: Streamlit buffers output until code block finishes
+        #   - Client initialization blocks for 60 seconds before any output
+        #
+        # v4 (2025.01.03): st.cache_resource in button handler - FAILED (60s delay)
+        #   - Issue: Cache wasn't warmed up, first call still initializes
+        #
+        # v5 (2025.01.03): Pre-initialize in main() before button - FAILED (60s delay)
+        #   - Issue: Multiple get_cognite_client() definitions, each with own cache
+        #   - Cache not shared between main() and button handler
+        #
+        # v6 (2025.01.03): Global get_cognite_client() at module level - FAILED (60s delay)
+        #   - Issue: Even with cache, get_cognite_client() call blocks until complete
+        #   - Streamlit doesn't render anything until function returns
+        #
+        # v7 (2025.01.03): Using st.empty() for immediate updates - TESTING
+        #   - Theory: Create placeholder first, update it after slow operations
+        #
+        # FUTURE OPTIONS IF v7 FAILS:
+        # - Option A: Use st.session_state to track if client is initialized
+        #   - Show "Please wait, initializing..." message on first page load
+        #   - Disable button until client is ready
+        # - Option B: Background thread for client initialization (not recommended)
+        #   - Streamlit doesn't support true async/threading well
+        # - Option C: Accept the delay and show clear progress indicator
+        #   - Use st.spinner with descriptive message
+        # - Option D: Initialize client in a separate "Connect" button
+        #   - User explicitly clicks "Connect" first, then can call functions
+        # ========================================================================
+        
+        # Create placeholder for immediate feedback
+        feedback = st.empty()
+        feedback.success("🚀 Button clicked! Initializing...")
         
         try:
-            from cognite.client import CogniteClient
-            client = CogniteClient()
-            
-            st.info(f"📞 Calling function: {function_name}")
-            st.info("⏳ This will test if cognite-toolkit can be installed and used in Functions...")
+            # Get cached client - this is the slow part (60s first time)
+            status = st.empty()
+            status.info("🔌 Getting Cognite client...")
+            client = get_cognite_client()
+            status.success("✅ Client ready!")
+            feedback.success(f"📞 Calling function: {function_name}...")
             
             # Auto-retry logic for deployment
             max_retries = 20  # Try for up to 10 minutes (20 * 30 seconds)
@@ -276,112 +220,282 @@ def handle(client, data):
                         return
             
             # If we get here, the function was called successfully
-            with st.spinner("Function called successfully, processing results..."):
-                
-                # Wait for result with progress
-                max_wait = 300  # 5 minutes
-                wait_time = 0
-                
-                progress_bar = st.progress(0)
-                status_text = st.empty()
-                
-                while wait_time < max_wait:
+            st.subheader("📋 Function Execution Logs")
+            
+            # Debug: Show what we're working with
+            with st.expander("🔍 Debug Info", expanded=True):
+                st.write(f"**Function External ID**: `{function_name}`")
+                st.write(f"**Call ID**: `{call_result.id}`")
+                st.write(f"**Call Result Type**: `{type(call_result)}`")
+                st.write(f"**Call Result Attributes**: {dir(call_result)}")
+            
+            # Create placeholders for live updates
+            logs_container = st.container()
+            status_placeholder = st.empty()
+            progress_bar = st.progress(0)
+            
+            # Wait for result with progress and live logs
+            max_wait = 300  # 5 minutes
+            wait_time = 0
+            last_log_timestamp = None
+            all_logs = []
+            
+            while wait_time < max_wait:
+                try:
+                    # ============================================================
+                    # API CALL FIXES:
+                    # v6 (2025.01.03): Changed retrieve(call_id=id) to retrieve(id) - FAILED
+                    # v10 (2025.01.03): Stack trace shows retrieve() ALSO needs function identifier!
+                    #   - Error at line 987: _get_function_identifier(function_id, function_external_id)
+                    #   - retrieve() has same signature as get_logs()!
+                    # ============================================================
+                    # Get function call status
+                    st.write(f"🔍 DEBUG: Retrieving status for function={function_name}, call_id={call_result.id}")
+                    call_status = client.functions.calls.retrieve(
+                        function_external_id=function_name,
+                        call_id=call_result.id
+                    )
+                    st.write(f"✅ DEBUG: Status retrieved: {call_status.status}")
+                    
+                    progress = min(wait_time / max_wait, 0.95)
+                    progress_bar.progress(progress)
+                    status_placeholder.text(f"Status: {call_status.status} (waited {wait_time}s)")
+                    
+                    # Get and display logs in real-time
                     try:
-                        # Get function call status
-                        call_status = client.functions.calls.retrieve(function_call_id=call_result.id)
+                        # ============================================================
+                        # API CALL FIXES HISTORY:
+                        # v6 (2025.01.03): Changed to get_logs(call_id=id) - FAILED
+                        # v7-v8 (2025.01.03): Try positional get_logs(id) - FAILED
+                        #   - Error: "Exactly one of function_id and function_external_id must be specified"
+                        #   - Analysis: get_logs() needs to know WHICH FUNCTION, not just call_id
+                        #   - The method signature is likely: get_logs(function_external_id=..., call_id=...)
+                        # v9 (2025.01.03): Pass function_external_id AND call_id - TESTING
+                        # v10 (2025.01.03): Add full debug logging with stack traces
+                        # ============================================================
+                        st.write(f"🔍 DEBUG: Getting logs for function={function_name}, call_id={call_result.id}")
+                        logs = client.functions.calls.get_logs(
+                            function_external_id=function_name,
+                            call_id=call_result.id
+                        )
                         
-                        progress = min(wait_time / max_wait, 0.95)
-                        progress_bar.progress(progress)
-                        status_text.text(f"Status: {call_status.status} (waited {wait_time}s)")
+                        # Convert to list to avoid exhausting iterator
+                        logs_list = list(logs) if logs else []
+                        st.write(f"✅ DEBUG: Received {len(logs_list)} log entries")
                         
-                        if call_status.status == "Completed":
-                            progress_bar.progress(1.0)
-                            status_text.text("✅ Function completed!")
-                            
-                            # Get the result
-                            result = client.functions.calls.retrieve(function_call_id=call_result.id)
-                            
-                            st.subheader("🎉 Function Results")
-                            
-                            if hasattr(result, 'response') and result.response:
-                                response_data = result.response
-                                
-                                # Show summary
-                                if 'summary' in response_data:
-                                    summary = response_data['summary']
-                                    st.subheader("📊 Test Summary")
-                                    
-                                    if summary.get('toolkit_installed'):
-                                        st.success("✅ cognite-toolkit installed successfully!")
-                                    else:
-                                        st.error("❌ cognite-toolkit installation failed")
-                                    
-                                    if summary.get('cdf_command_available'):
-                                        st.success("✅ cdf command is available!")
-                                    else:
-                                        st.error("❌ cdf command not available")
-                                    
-                                    if summary.get('library_importable'):
-                                        st.success("✅ Toolkit library can be imported!")
-                                    else:
-                                        st.warning("⚠️ Toolkit library import issues")
-                                
-                                # Show detailed results
-                                with st.expander("🔍 Detailed Results"):
-                                    st.json(response_data)
-                                
-                                # Analyze results
-                                st.subheader("🎯 Analysis")
-                                summary = response_data.get('summary', {})
-                                
-                                if summary.get('toolkit_installed') and summary.get('cdf_command_available'):
-                                    st.success("🎉 **BREAKTHROUGH CONFIRMED**: Real toolkit works in Functions!")
-                                    st.balloons()  # Celebration!
-                                    
-                                    # Show key achievements
-                                    st.subheader("🏆 Key Achievements")
-                                    col1, col2 = st.columns(2)
-                                    
-                                    with col1:
-                                        st.metric("Toolkit Installed", "✅ SUCCESS", "cognite-toolkit-0.6.45")
-                                        st.metric("CDF Command Found", "✅ SUCCESS", "/home/.local/bin/cdf")
-                                        st.metric("PATH Fixed", "✅ SUCCESS", "Auto-added to PATH")
-                                    
-                                    with col2:
-                                        st.metric("Build Command", "✅ WORKS", "Returns expected error")
-                                        st.metric("Deploy Command", "✅ WORKS", "Returns expected error") 
-                                        st.metric("Help Command", "✅ WORKS", "Full help output")
-                                    
-                                    st.info("💡 **Next Step**: Implement full build/deploy workflow with real config files")
-                                    st.info("🚀 **Impact**: Streamlit SaaS can now use real toolkit via Functions!")
-                                    
-                                else:
-                                    st.error("❌ Toolkit approach has limitations in Functions")
+                        # DEBUG: Show what's in the first log
+                        if logs_list:
+                            st.write(f"🔍 DEBUG: First log object type: {type(logs_list[0])}")
+                            st.write(f"🔍 DEBUG: First log attributes: {dir(logs_list[0])}")
+                            st.write(f"🔍 DEBUG: First log content: {logs_list[0]}")
+                        
+                        # Filter new logs
+                        # ============================================================
+                        # v13 DEBUG: Found the issue!
+                        # - Timestamp filtering is too aggressive
+                        # - We're comparing timestamp objects, but they might be strings
+                        # - Need to handle timestamp comparison properly
+                        # v14: Show ALL logs on first poll, then filter subsequent ones
+                        # ============================================================
+                        new_logs = []
+                        for log in logs_list:
+                            # On first poll (last_log_timestamp is None), show all logs
+                            # On subsequent polls, only show logs newer than last seen
+                            if last_log_timestamp is None:
+                                new_logs.append(log)
                             else:
-                                st.error("❌ No response data received")
-                            
-                            break
-                            
-                        elif call_status.status == "Failed":
-                            st.error(f"❌ Function failed: {call_status}")
-                            
-                            # Try to get error details
+                                # Try to compare timestamps
+                                try:
+                                    log_ts = log.timestamp
+                                    # Convert to comparable format if needed
+                                    if isinstance(log_ts, str):
+                                        from dateutil import parser
+                                        log_ts = parser.parse(log_ts).timestamp() * 1000
+                                    if log_ts > last_log_timestamp:
+                                        new_logs.append(log)
+                                except:
+                                    # If comparison fails, include the log
+                                    new_logs.append(log)
+                        
+                        # Update last_log_timestamp AFTER filtering
+                        if new_logs:
                             try:
-                                logs = client.functions.calls.get_logs(call_result.id)
-                                st.subheader("📋 Function Logs")
-                                for log in logs:
-                                    st.text(log.message)
+                                last_ts = new_logs[-1].timestamp
+                                if isinstance(last_ts, str):
+                                    from dateutil import parser
+                                    last_log_timestamp = parser.parse(last_ts).timestamp() * 1000
+                                else:
+                                    last_log_timestamp = last_ts
                             except:
-                                st.warning("Could not retrieve function logs")
+                                pass
+                        
+                        st.write(f"🔍 DEBUG: Filtered to {len(new_logs)} new logs (last_timestamp={last_log_timestamp})")
+                        
+                        # Display new logs
+                        if new_logs:
+                            st.write(f"🔍 DEBUG: Displaying {len(new_logs)} new logs...")
+                            for log in new_logs:
+                                # Get the log message
+                                log_msg = log.message if hasattr(log, 'message') else str(log)
+                                
+                                # Format timestamp
+                                time_str = ""
+                                if hasattr(log, 'timestamp') and log.timestamp:
+                                    try:
+                                        from datetime import datetime
+                                        if isinstance(log.timestamp, str):
+                                            from dateutil import parser
+                                            dt = parser.parse(log.timestamp)
+                                            time_str = dt.strftime('%H:%M:%S')
+                                        elif isinstance(log.timestamp, (int, float)):
+                                            dt = datetime.fromtimestamp(log.timestamp / 1000)
+                                            time_str = dt.strftime('%H:%M:%S')
+                                    except:
+                                        time_str = str(log.timestamp)[:8]
+                                
+                                # Display in logs container
+                                with logs_container:
+                                    if time_str:
+                                        st.text(f"[{time_str}] {log_msg}")
+                                    else:
+                                        st.text(log_msg)
+                                
+                                all_logs.append(log_msg)
+                    except Exception as log_error:
+                        # Show detailed error information
+                        st.error(f"❌ DEBUG: Error getting logs: {log_error}")
+                        st.error(f"🔍 DEBUG: Error type: {type(log_error).__name__}")
+                        st.code(traceback.format_exc())
+                        # Don't break - continue trying
+                    
+                    if call_status.status == "Completed":
+                        progress_bar.progress(1.0)
+                        status_placeholder.text("✅ Function completed!")
+                        
+                        # Get any final logs
+                        try:
+                            logs = client.functions.calls.get_logs(
+                                function_external_id=function_name,
+                                call_id=call_result.id
+                            )
+                            logs_list = list(logs) if logs else []
+                            final_new_logs = []
+                            for log in logs_list:
+                                if last_log_timestamp is None or log.timestamp > last_log_timestamp:
+                                    final_new_logs.append(log)
                             
-                            return
+                            if final_new_logs:
+                                with logs_container:
+                                    for log in final_new_logs:
+                                        log_msg = log.message if hasattr(log, 'message') else str(log)
+                                        if hasattr(log, 'timestamp') and log.timestamp:
+                                            st.text(f"[{log.timestamp}] {log_msg}")
+                                        else:
+                                            st.text(log_msg)
+                                        all_logs.append(log_msg)
+                        except:
+                            pass
                         
-                        time.sleep(5)  # Wait 5 seconds before checking again
-                        wait_time += 5
+                        # Get the result
+                        result = client.functions.calls.retrieve(
+                            function_external_id=function_name,
+                            call_id=call_result.id
+                        )
                         
-                    except Exception as status_error:
-                        st.error(f"Error checking function status: {status_error}")
+                        st.subheader("🎉 Function Results")
+                        
+                        # DEBUG: Show what's in the result object
+                        st.write(f"🔍 DEBUG: Result object type: {type(result)}")
+                        st.write(f"🔍 DEBUG: Result attributes: {dir(result)}")
+                        st.write(f"🔍 DEBUG: Has response attr? {hasattr(result, 'response')}")
+                        if hasattr(result, 'response'):
+                            st.write(f"🔍 DEBUG: Response value: {result.response}")
+                            st.write(f"🔍 DEBUG: Response type: {type(result.response)}")
+                        
+                        if hasattr(result, 'response') and result.response:
+                            response_data = result.response
+                            
+                            # Show summary
+                            if 'summary' in response_data:
+                                summary = response_data['summary']
+                                st.subheader("📊 Test Summary")
+                                
+                                if summary.get('toolkit_installed'):
+                                    st.success("✅ cognite-toolkit installed successfully!")
+                                else:
+                                    st.error("❌ cognite-toolkit installation failed")
+                                
+                                if summary.get('cdf_command_available'):
+                                    st.success("✅ cdf command is available!")
+                                else:
+                                    st.error("❌ cdf command not available")
+                                
+                                if summary.get('cli_tool_confirmed'):
+                                    st.success("✅ Toolkit is CLI-based (correct!)")
+                                    st.info("💡 cognite-toolkit is a CLI tool, not a Python library")
+                                
+                                if summary.get('ready_for_production'):
+                                    st.success("🎉 READY FOR PRODUCTION USE!")
+                            
+                            # Show detailed results
+                            with st.expander("🔍 Detailed Results"):
+                                st.json(response_data)
+                            
+                            # Analyze results
+                            st.subheader("🎯 Analysis")
+                            summary = response_data.get('summary', {})
+                            
+                            if summary.get('toolkit_installed') and summary.get('cdf_command_available'):
+                                st.success("🎉 **BREAKTHROUGH CONFIRMED**: Real toolkit works in Functions!")
+                                st.balloons()  # Celebration!
+                                
+                                # Show key achievements
+                                st.subheader("🏆 Key Achievements")
+                                col1, col2 = st.columns(2)
+                                
+                                with col1:
+                                    st.metric("Toolkit Installed", "✅ SUCCESS", "cognite-toolkit-0.6.45")
+                                    st.metric("CDF Command Found", "✅ SUCCESS", "/home/.local/bin/cdf")
+                                    st.metric("PATH Fixed", "✅ SUCCESS", "Auto-added to PATH")
+                                
+                                with col2:
+                                    st.metric("Build Command", "✅ WORKS", "Returns expected error")
+                                    st.metric("Deploy Command", "✅ WORKS", "Returns expected error") 
+                                    st.metric("Help Command", "✅ WORKS", "Full help output")
+                                
+                                st.info("💡 **Next Step**: Implement full build/deploy workflow with real config files")
+                                st.info("🚀 **Impact**: Streamlit SaaS can now use real toolkit via Functions!")
+                                
+                            else:
+                                st.error("❌ Toolkit approach has limitations in Functions")
+                        else:
+                            st.error("❌ No response data received")
+                        
                         break
+                        
+                    elif call_status.status == "Failed":
+                        st.error(f"❌ Function failed: {call_status}")
+                        
+                        # Final logs are already shown above in logs_container
+                        st.warning("⚠️ Check the logs above for error details")
+                        return
+                    
+                    # Wait before checking again
+                    time.sleep(2)  # Check every 2 seconds for more responsive updates
+                    wait_time += 2
+                    
+                except Exception as status_error:
+                    st.error(f"❌ ERROR: Error checking function status: {status_error}")
+                    st.error(f"🔍 DEBUG: Error type: {type(status_error).__name__}")
+                    st.subheader("📋 Full Stack Trace")
+                    st.code(traceback.format_exc())
+                    
+                    # Show what we were trying to do
+                    st.subheader("🔍 Debug Info")
+                    st.write(f"**Function Name**: {function_name}")
+                    st.write(f"**Call ID**: {call_result.id}")
+                    st.write(f"**Wait Time**: {wait_time}s")
+                    break
                 
                 if wait_time >= max_wait:
                     st.error("⏰ Function call timed out after 5 minutes")
@@ -395,19 +509,29 @@ def check_function_result():
     """Check the result of a specific function call by ID"""
     st.subheader("🔍 Check Function Result by Call ID")
     
+    # ============================================================
+    # v11 (2025.01.03): Added function_external_id input
+    #   - retrieve() requires function identifier, not just call_id
+    # ============================================================
+    function_external_id = st.text_input("Function External ID", value="test-toolkit-function", key="check_function_id")
     call_id = st.text_input("Function Call ID", placeholder="e.g., 1510507578838126")
     
     if st.button("📋 Get Function Result", key="get_result_button"):
         if not call_id:
             st.error("Please enter a Call ID")
             return
+        if not function_external_id:
+            st.error("Please enter a Function External ID")
+            return
             
         try:
-            from cognite.client import CogniteClient
-            client = CogniteClient()
+            client = get_cognite_client()
             
             # Get the function call result
-            result = client.functions.calls.retrieve(function_call_id=int(call_id))
+            result = client.functions.calls.retrieve(
+                function_external_id=function_external_id,
+                call_id=int(call_id)
+            )
             
             st.subheader("📊 Function Call Details")
             st.write(f"**Status**: {result.status}")
@@ -589,66 +713,33 @@ def test_cognite_client():
 
 def main():
     """Main Streamlit app"""
-    st.title("🧪 Cognite Toolkit API Test")
-    st.markdown("Testing different approaches to get toolkit functionality in Streamlit SaaS")
     
-    # Previous trials (archived for cleaner UI)
-    with st.expander("📋 Previous Trial Results (Archived)", expanded=False):
-        st.subheader("🧪 TRIAL 1A: Direct Import")
-        st.error("❌ FAILED: ModuleNotFoundError - package not installed")
-        
-        st.subheader("🧪 TRIAL 1B: With requirements.txt")
-        st.error("❌ FAILED: Pyodide compatibility - native dependencies")
-        st.code("ValueError: Can't find a pure Python 3 wheel for: 'cognite-toolkit'")
-        
-        st.subheader("🧪 TRIAL 2: Direct CogniteClient")
-        st.warning("⚠️ WORKS but simulation-only (not acceptable)")
-        st.info("💡 Can simulate toolkit output but no real toolkit functionality")
-        
-        # Uncomment to test archived trials
-        # import_success, classes = test_toolkit_imports()
-        # trial2_success, trial2_result = test_trial_2_cognite_sdk_direct()
+    # Display version at the top
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        st.title("🧪 Cognite Toolkit API Test")
+    with col2:
+        st.caption(f"Version: {VERSION}")
+        st.caption(f"⏰ {datetime.now().strftime('%H:%M:%S')}")
+    
+    # Warm up the cache immediately (runs once per session)
+    with st.spinner("🔌 Initializing Cognite connection..."):
+        try:
+            client = get_cognite_client()
+            st.success(f"✅ Connected to: {client.config.project}")
+        except Exception as e:
+            st.error(f"❌ Failed to connect: {e}")
     
     st.markdown("---")
     
-    # Test 3: Cognite Functions Approach (CURRENT)
-    st.subheader("🚀 TRIAL 3: Cognite Functions (BREAKTHROUGH)")
-    test_trial_3_cognite_functions()  # Don't unpack return value
+    # Main function test interface
+    test_trial_3_cognite_functions()
     
     st.markdown("---")
     
     # Function Result Checker
     check_function_result()
-    
-    st.markdown("---")
-    
-    # Next steps after breakthrough
-    with st.expander("🚀 Next Steps After Breakthrough", expanded=False):
-        st.info("**Phase 2**: Implement full build/deploy workflow using Functions")
-        st.info("**Phase 3**: Add config file upload and processing")
-        st.info("**Phase 4**: Real-time deployment status and logs")
-        st.info("**Phase 5**: Integration with existing Streamlit apps")
-    
-    st.markdown("---")
-    
-    # Summary
-    st.subheader("📊 Current Status")
-    st.error("❌ **Trial 1A**: cognite-toolkit library import - FAILED (not in requirements.txt)")
-    st.error("❌ **Trial 1B**: cognite-toolkit with requirements.txt - FAILED (Pyodide incompatible)")
-    st.warning("📦 **Trial 2**: Direct CogniteClient simulation - ARCHIVED (works but simulation-only)")
-    st.success("🚀 **Trial 3**: Cognite Functions approach - BREAKTHROUGH CANDIDATE")
-    
-    st.subheader("🎯 **CURRENT CONCLUSION**")
-    st.error("🚫 **cognite-toolkit library CANNOT be used in Streamlit SaaS**")
-    st.success("✅ **Cognite Functions may enable real toolkit functionality**")
-    st.info("🔬 **Next Step**: Deploy and test the Cognite Function approach")
-    
-    # Show environment info
-    with st.expander("🔍 Environment Info"):
-        st.code(f"Python version: {sys.version}")
-        st.code(f"Platform: {sys.platform}")
-        st.code(f"Available packages: cognite-sdk, streamlit")
-        st.code(f"Missing packages: cognite-toolkit")
+
 
 
 if __name__ == "__main__":
