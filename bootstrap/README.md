@@ -56,7 +56,7 @@ import requests
 client = CogniteClient()
 print(f"📋 Connected to: {client.config.project}")
 
-mini_url = "https://raw.githubusercontent.com/bgfast/cognite-quickstart/main/bootstrap/mini.py"
+mini_url = "https://raw.githubusercontent.com/bgfast/cognite-quickstart/oct_mods/bootstrap/mini.py"
 exec(requests.get(mini_url).text)
 ```
 
@@ -103,7 +103,7 @@ import requests
 client = CogniteClient()
 print(f"📋 Deploying to: {client.config.project}")
 
-deploy_url = "https://raw.githubusercontent.com/bgfast/cognite-quickstart/main/bootstrap/deploy.py"
+deploy_url = "https://raw.githubusercontent.com/bgfast/cognite-quickstart/oct_mods/bootstrap/deploy.py"
 exec(requests.get(deploy_url).text)
 
 # ✅ Done! Check Apps → Streamlit → "Test Toolkit API"

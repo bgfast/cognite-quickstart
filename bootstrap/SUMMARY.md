@@ -24,7 +24,7 @@ from cognite.client import CogniteClient
 import requests
 
 client = CogniteClient()
-exec(requests.get("https://raw.githubusercontent.com/bgfast/cognite-quickstart/main/bootstrap/mini.py").text)
+exec(requests.get("https://raw.githubusercontent.com/bgfast/cognite-quickstart/oct_mods/bootstrap/mini.py").text)
 ```
 - Downloads full notebook
 - Creates `toolkit_bootstrap.ipynb`
@@ -60,7 +60,7 @@ from cognite.client import CogniteClient
 import requests
 
 client = CogniteClient()
-exec(requests.get("https://raw.githubusercontent.com/bgfast/cognite-quickstart/main/bootstrap/deploy.py").text)
+exec(requests.get("https://raw.githubusercontent.com/bgfast/cognite-quickstart/oct_mods/bootstrap/deploy.py").text)
 ```
 - Automatic deployment
 - ~30 seconds total
