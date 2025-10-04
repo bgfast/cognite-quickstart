@@ -1,7 +1,7 @@
 externalId: test-toolkit-api
 name: Test Toolkit API
 creator: brent.groom@cognitedata.com
-description: "v1.9 - Cleaned UI, archived old trials, enhanced function library testing"
+description: "v2.0 - BREAKTHROUGH: Confirmed toolkit is CLI-based and READY FOR PRODUCTION!"
 published: true
 theme: Light
 entrypoint: main.py

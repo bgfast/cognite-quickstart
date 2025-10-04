@@ -5,6 +5,25 @@ Download Application Packages as zip files for Cognite Toolkit deployment
 This script downloads GitHub repositories as zip files based on URLs
 in repositories.yaml and saves them in the files/ directory for the 
 Cognite Toolkit to upload to CDF.
+
+For each repository, this script creates TWO zip files:
+1. Full zip: Contains the complete repository (e.g., cognite-quickstart-main.zip)
+2. Mini zip: Contains only README*.md files (e.g., cognite-quickstart-main-mini.zip)
+
+The mini zips are used by Streamlit apps to:
+- Download lightweight files from CDF for quick browsing
+- Present users with available installation options
+- Show configuration details before downloading full repositories
+- Provide a better UX by avoiding large downloads until needed
+
+Naming Convention:
+- Full zips: {repo-name}.zip
+- Mini zips: {repo-name}-mini.zip
+
+This makes it easy for Streamlit to:
+1. List all available packages by downloading *-mini.zip files
+2. Parse README files to show configuration options
+3. Download full {repo-name}.zip only when user selects a configuration
 """
 
 import os
@@ -12,6 +31,8 @@ import sys
 import requests
 import yaml
 import subprocess
+import zipfile
+import io
 from pathlib import Path
 from typing import Dict, List, Optional
 import time
@@ -144,6 +165,57 @@ class AppPackageDownloader:
         """Generate filename"""
         return f"{base_filename}.zip"
     
+    def generate_mini_filename(self, base_filename: str) -> str:
+        """Generate filename for mini zip (README files only)"""
+        return f"{base_filename}-mini.zip"
+    
+    def create_mini_zip(self, full_zip_content: bytes, base_filename: str) -> Optional[bytes]:
+        """
+        Create a mini zip containing only README*.md files from the full zip.
+        This mini zip is used by Streamlit to present installation options to users.
+        
+        Args:
+            full_zip_content: The full zip file content
+            base_filename: Base filename for logging
+            
+        Returns:
+            bytes: Mini zip content, or None if no README files found
+        """
+        try:
+            print(f"📝 Creating mini zip with README files...")
+            
+            # Read the full zip
+            with zipfile.ZipFile(io.BytesIO(full_zip_content), 'r') as full_zip:
+                # Find all README*.md files (case-insensitive)
+                readme_files = [
+                    name for name in full_zip.namelist() 
+                    if name.lower().endswith('.md') and 'readme' in os.path.basename(name).lower()
+                ]
+                
+                if not readme_files:
+                    print(f"⚠️ No README files found in {base_filename}")
+                    return None
+                
+                print(f"📋 Found {len(readme_files)} README files:")
+                for readme in readme_files:
+                    print(f"   - {readme}")
+                
+                # Create mini zip in memory
+                mini_zip_buffer = io.BytesIO()
+                with zipfile.ZipFile(mini_zip_buffer, 'w', zipfile.ZIP_DEFLATED) as mini_zip:
+                    for readme_file in readme_files:
+                        content = full_zip.read(readme_file)
+                        mini_zip.writestr(readme_file, content)
+                
+                mini_zip_content = mini_zip_buffer.getvalue()
+                print(f"✅ Mini zip created: {len(mini_zip_content):,} bytes")
+                return mini_zip_content
+                
+        except Exception as e:
+            print(f"❌ Failed to create mini zip for {base_filename}: {e}")
+            print(f"🔍 Error type: {type(e).__name__}")
+            return None
+    
     
     def cleanup_old_files(self) -> None:
         """Clean up old zip files - with simple names, we just overwrite existing files"""
@@ -178,7 +250,7 @@ class AppPackageDownloader:
             return False
     
     def download_repository(self, repo_info: Dict[str, str]) -> bool:
-        """Download a single repository"""
+        """Download a single repository and create both full and mini zips"""
         try:
             print(f"🎯 Processing repository: {repo_info['name']}")
             print(f"🔗 URL: {repo_info['url']}")
@@ -186,19 +258,38 @@ class AppPackageDownloader:
             # Download zip file
             zip_content = self.download_zip_file(repo_info["url"], repo_info["name"])
             
-            # Generate filename with timestamp
+            # Generate filename for full zip
             filename = self.generate_filename(repo_info["name"])
             print(f"🏷️ Generated filename: {filename}")
             
-            # Save to files directory
+            # Save full zip to files directory
             success = self.save_to_files_dir(zip_content, filename)
             
-            if success:
-                print(f"🎉 Successfully processed {repo_info['name']}")
-            else:
-                print(f"💥 Failed to save {repo_info['name']}")
+            if not success:
+                print(f"💥 Failed to save full zip for {repo_info['name']}")
+                return False
+            
+            print(f"✅ Full zip saved successfully")
+            print()
+            
+            # Create and save mini zip with README files
+            mini_zip_content = self.create_mini_zip(zip_content, repo_info["name"])
+            
+            if mini_zip_content:
+                mini_filename = self.generate_mini_filename(repo_info["name"])
+                print(f"🏷️ Generated mini filename: {mini_filename}")
                 
-            return success
+                mini_success = self.save_to_files_dir(mini_zip_content, mini_filename)
+                
+                if mini_success:
+                    print(f"✅ Mini zip saved successfully")
+                else:
+                    print(f"⚠️ Failed to save mini zip (full zip saved successfully)")
+            else:
+                print(f"⚠️ Skipping mini zip creation (no README files found)")
+            
+            print(f"🎉 Successfully processed {repo_info['name']}")
+            return True
             
         except Exception as e:
             print(f"❌ Failed to process {repo_info['name']}: {e}")
@@ -252,8 +343,12 @@ class AppPackageDownloader:
         print(f"📈 Success rate: {(success_count/total_count)*100:.1f}%")
         
         # Show downloaded files
-        zip_files = list(self.files_dir.glob("*.zip"))
-        print(f"📁 Files in directory: {len(zip_files)} zip files")
+        full_zip_files = [f for f in self.files_dir.glob("*.zip") if not f.name.endswith("-mini.zip")]
+        mini_zip_files = list(self.files_dir.glob("*-mini.zip"))
+        print(f"📁 Files in directory:")
+        print(f"   • Full zips: {len(full_zip_files)} files")
+        print(f"   • Mini zips (README only): {len(mini_zip_files)} files")
+        print(f"   • Total: {len(full_zip_files) + len(mini_zip_files)} files")
         
         if success_count == total_count:
             print()
@@ -262,7 +357,8 @@ class AppPackageDownloader:
             print("   1. Run 'cdf build --env your-env modules/app-packages-zips/'")
             print("   2. Run 'cdf deploy --env your-env modules/app-packages-zips/'")
             print("   3. Files will be uploaded to CDF Files API automatically")
-            print("   4. Use the GitHub Repo Deployer Streamlit app to access files")
+            print("   4. Streamlit app will download mini zips to present installation options")
+            print("   5. Use the GitHub Repo Deployer Streamlit app to deploy selected configs")
         else:
             print()
             print("⚠️ Some repositories failed to download")
