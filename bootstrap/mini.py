@@ -84,7 +84,21 @@ try:
     with open(notebook_filename, 'w', encoding='utf-8') as f:
         json.dump(notebook_content, f, indent=2)
     
-    print(f"✅ Notebook created: {notebook_filename}")
+    # Wait for file system to sync (important in CDF Jupyter)
+    import time
+    import os
+    print(f"   Writing file...")
+    time.sleep(2)  # Give file system time to sync
+    
+    # Verify file exists and has content
+    if os.path.exists(notebook_filename):
+        file_size = os.path.getsize(notebook_filename)
+        print(f"✅ Notebook created: {notebook_filename}")
+        print(f"   Size: {file_size:,} bytes")
+        print(f"   Location: {os.path.abspath(notebook_filename)}")
+    else:
+        print("⚠️  File created but not yet visible in file system")
+        print("   Wait a few seconds and refresh your file browser")
     print()
 except Exception as e:
     print(f"❌ Failed to create notebook file: {e}")
@@ -97,15 +111,17 @@ print("🎉 MINI BOOTSTRAP COMPLETE!")
 print("=" * 60)
 print()
 print("📋 Next Steps:")
-print(f"   1. Open '{notebook_filename}' in Jupyter")
-print("   2. Review the cells to understand what they do")
-print("   3. Run the cells one-by-one to deploy")
+print(f"   1. **WAIT 3-5 SECONDS** for file to appear in Jupyter")
+print(f"   2. Refresh your Jupyter file browser if needed")
+print(f"   3. Open '{notebook_filename}' in Jupyter")
+print("   4. Review the cells to understand what they do")
+print("   5. Run the cells one-by-one to deploy")
 print()
 print("📚 What the notebook will deploy:")
 print("   • Dataset: streamlit-test-toolkit-dataset")
 print("   • Function: test-toolkit-function (runs real cdf commands)")
 print("   • Streamlit: test-toolkit-api (UI for testing)")
 print()
-print("💡 Tip: Read the cell comments to understand each step!")
+print("💡 Tip: If notebook appears empty, close and reopen it!")
 print()
 
