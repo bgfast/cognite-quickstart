@@ -5,7 +5,7 @@ Tests if the toolkit library API works in SaaS environment
 """
 
 # Version tracking for deployment verification
-VERSION = "2025.01.03.v15"  # Update this when deploying changes
+VERSION = "2025.01.03.v17"  # Update this when deploying changes
 
 import streamlit as st
 import sys
@@ -406,14 +406,34 @@ def test_trial_3_cognite_functions():
                         
                         # DEBUG: Show what's in the result object
                         st.write(f"🔍 DEBUG: Result object type: {type(result)}")
-                        st.write(f"🔍 DEBUG: Result attributes: {dir(result)}")
                         st.write(f"🔍 DEBUG: Has response attr? {hasattr(result, 'response')}")
-                        if hasattr(result, 'response'):
-                            st.write(f"🔍 DEBUG: Response value: {result.response}")
-                            st.write(f"🔍 DEBUG: Response type: {type(result.response)}")
+                        st.write(f"🔍 DEBUG: Has get_response method? {hasattr(result, 'get_response')}")
                         
-                        if hasattr(result, 'response') and result.response:
+                        # ============================================================
+                        # v15 DEBUG: Found the issue!
+                        # - result object doesn't have 'response' attribute
+                        # - But it has 'get_response' method in the attributes list!
+                        # v16: Use get_response() method instead of response attribute
+                        # ============================================================
+                        
+                        response_data = None
+                        if hasattr(result, 'get_response'):
+                            try:
+                                response_data = result.get_response()
+                                st.write(f"🔍 DEBUG: Got response via get_response(): {type(response_data)}")
+                            except Exception as e:
+                                st.error(f"❌ Error calling get_response(): {e}")
+                        elif hasattr(result, 'response'):
                             response_data = result.response
+                            st.write(f"🔍 DEBUG: Got response via attribute: {type(response_data)}")
+                        
+                        if response_data:
+                            st.write(f"🔍 DEBUG: response_data keys: {response_data.keys() if isinstance(response_data, dict) else 'Not a dict'}")
+                            st.write(f"🔍 DEBUG: Has 'summary' key? {'summary' in response_data if isinstance(response_data, dict) else 'N/A'}")
+                            
+                            # Show the full response data first
+                            st.subheader("📦 Full Response Data")
+                            st.json(response_data)
                             
                             # Show summary
                             if 'summary' in response_data:

@@ -1,0 +1,2 @@
+# No additional requirements needed - uses only standard library
+# cognite-sdk is automatically available in Cognite Functions
