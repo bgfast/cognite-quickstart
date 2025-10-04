@@ -30,7 +30,7 @@ print("=" * 60)
 print()
 
 # Configuration
-GITHUB_RAW_BASE = "https://raw.githubusercontent.com/bgfast/cognite-quickstart/main"
+GITHUB_RAW_BASE = "https://raw.githubusercontent.com/bgfast/cognite-quickstart/oct_mods"
 FUNCTION_HANDLER_URL = f"{GITHUB_RAW_BASE}/modules/test-toolkit-api/functions/test-toolkit-function/handler.py"
 FUNCTION_REQS_URL = f"{GITHUB_RAW_BASE}/modules/test-toolkit-api/functions/test-toolkit-function/requirements.txt"
 STREAMLIT_MAIN_URL = f"{GITHUB_RAW_BASE}/modules/test-toolkit-api/streamlit/test-toolkit-api/main.py"

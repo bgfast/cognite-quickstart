@@ -55,7 +55,7 @@ try:
     import requests
     import json
     
-    GITHUB_RAW_BASE = "https://raw.githubusercontent.com/bgfast/cognite-quickstart/main/bootstrap"
+    GITHUB_RAW_BASE = "https://raw.githubusercontent.com/bgfast/cognite-quickstart/oct_mods/bootstrap"
     NOTEBOOK_URL = f"{GITHUB_RAW_BASE}/toolkit_bootstrap.ipynb"
     
     print(f"   Source: {NOTEBOOK_URL}")
