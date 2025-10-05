@@ -29,7 +29,7 @@ def handle(client, data):
             "python_version": sys.version,
             "input_data": data,
             "project": client.config.project,
-            "function_id": "hello-world-function"
+            "function_id": "hw-function"
         },
         "success": True
     }

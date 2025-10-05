@@ -1,0 +1,35 @@
+environment:
+  name: bgfast
+  project: bgfast
+  validation-type: dev
+  selected:
+  ### ===========================================
+  ### HELLO WORLD FUNCTION MODULE
+  ### ===========================================
+  - modules/hw-function                      ### Hello World Function + Streamlit demo
+
+variables:
+  # Environment Configuration
+  hw_function_space: hw-function             # Name of the hello world function space
+  hw_dataset: hw-function-dataset            # Name of the hello world dataset
+  
+  # Authentication Configuration
+  superuser_sourceid: ${SUPERUSER_SOURCEID_ENV} # Source id for the super users in auth
+  my_user_identifier: ${USER_IDENTIFIER}     # User identifier for custom_access_management
+  readwrite_source_id: ${SUPERUSER_SOURCEID_ENV}
+
+  # CDF Configuration (populated from .env file)
+  CDF_PROJECT: ${CDF_PROJECT}
+  CDF_CLUSTER: ${CDF_CLUSTER}
+  CDF_URL: https://${CDF_CLUSTER}.cognitedata.com
+  
+  # IDP Configuration
+  IDP_CLIENT_ID: ${IDP_CLIENT_ID}
+  IDP_CLIENT_SECRET: ${IDP_CLIENT_SECRET}
+  IDP_SCOPES: ${IDP_SCOPES}
+  IDP_TENANT_ID: ${IDP_TENANT_ID}
+  IDP_TOKEN_URL: ${IDP_TOKEN_URL}
+  
+  # Function Configuration
+  function_clientId: ${FUNCTION_CLIENT_ID}
+  function_clientSecret: ${FUNCTION_CLIENT_SECRET}

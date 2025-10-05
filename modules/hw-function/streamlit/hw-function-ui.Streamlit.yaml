@@ -1,0 +1,8 @@
+externalId: hw-function-ui
+name: Hello World Function UI
+creator: brent.groom@cognitedata.com
+description: "v1.1 - Streamlit UI with immediate button feedback"
+published: true
+theme: Light
+entrypoint: main.py
+dataSetExternalId: hw-function-dataset

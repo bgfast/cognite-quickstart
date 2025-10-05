@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-NEAT Data Model Testing Script
+Hello World NEAT Data Model Testing Script
 
-This script provides comprehensive testing for the neat-basic data model,
+This script provides comprehensive testing for the hw-neat data model,
 including deployment validation, data operations, and model integrity checks.
 """
 
@@ -42,7 +42,7 @@ class NeatDataModelTester:
     def __init__(self, client: Optional[CogniteClient] = None):
         """Initialize the tester"""
         self.client = client or self._create_client()
-        self.space_id = "neat-basic"
+        self.space_id = "hw-neat"
         self.container_id = "BasicAsset"
         self.view_id = "BasicAsset"
         self.test_results: List[TestResult] = []
@@ -108,7 +108,7 @@ class NeatDataModelTester:
         return test_result
     
     def test_space_exists(self) -> TestResult:
-        """Test that the neat-basic space exists"""
+        """Test that the hw-neat space exists"""
         try:
             space = self.client.data_modeling.spaces.retrieve(self.space_id)
             if space:

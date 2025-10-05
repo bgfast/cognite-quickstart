@@ -5,7 +5,7 @@ Tests if the toolkit library API works in SaaS environment
 """
 
 # Version tracking for deployment verification
-VERSION = "2025.01.03.v17"  # Update this when deploying changes
+VERSION = "2025.01.03.v31"  # Update this when deploying changes
 
 import streamlit as st
 import sys
@@ -134,6 +134,28 @@ def test_trial_3_cognite_functions():
     
     function_name = st.text_input("Function External ID", value="test-toolkit-function")
     
+    # Environment file upload
+    st.subheader("🔐 Environment Configuration (Optional)")
+    uploaded_env_file = st.file_uploader(
+        "Upload .env file (optional - for IDP credentials)",
+        type=None,
+        help="Upload a .env file with IDP_CLIENT_ID, IDP_CLIENT_SECRET, IDP_TENANT_ID for hosted extractors"
+    )
+    
+    env_vars_dict = {}
+    if uploaded_env_file is not None:
+        env_content = str(uploaded_env_file.read(), "utf-8")
+        st.success(f"✅ Loaded {uploaded_env_file.name}")
+        
+        # Parse .env file into dict
+        for line in env_content.split('\n'):
+            line = line.strip()
+            if line and not line.startswith('#') and '=' in line:
+                key, value = line.split('=', 1)
+                env_vars_dict[key.strip()] = value.strip()
+        
+        st.info(f"📋 Parsed {len(env_vars_dict)} environment variables")
+    
     if st.button("🧪 Call Function to Test Toolkit", type="primary"):
         if not function_name:
             st.error("Please enter a function name")
@@ -191,10 +213,19 @@ def test_trial_3_cognite_functions():
             while retry_count < max_retries:
                 try:
                     with st.spinner(f"Calling Cognite Function... (attempt {retry_count + 1}/{max_retries})"):
-                        # Call the function
+                        # Call the function with env_vars if provided
+                        function_data = {
+                            "env": "weather",  # Default environment
+                            "zip_file": "cognite-quickstart-main.zip"
+                        }
+                        
+                        # Add env_vars if uploaded
+                        if env_vars_dict:
+                            function_data["env_vars"] = env_vars_dict
+                        
                         call_result = client.functions.call(
                             external_id=function_name,
-                            data={"test": "toolkit_installation"}
+                            data=function_data
                         )
                         
                         st.success(f"✅ Function called successfully! Call ID: {call_result.id}")
@@ -428,66 +459,84 @@ def test_trial_3_cognite_functions():
                             st.write(f"🔍 DEBUG: Got response via attribute: {type(response_data)}")
                         
                         if response_data:
-                            st.write(f"🔍 DEBUG: response_data keys: {response_data.keys() if isinstance(response_data, dict) else 'Not a dict'}")
-                            st.write(f"🔍 DEBUG: Has 'summary' key? {'summary' in response_data if isinstance(response_data, dict) else 'N/A'}")
-                            
-                            # Show the full response data first
-                            st.subheader("📦 Full Response Data")
-                            st.json(response_data)
-                            
-                            # Show summary
-                            if 'summary' in response_data:
-                                summary = response_data['summary']
-                                st.subheader("📊 Test Summary")
-                                
-                                if summary.get('toolkit_installed'):
-                                    st.success("✅ cognite-toolkit installed successfully!")
-                                else:
-                                    st.error("❌ cognite-toolkit installation failed")
-                                
-                                if summary.get('cdf_command_available'):
-                                    st.success("✅ cdf command is available!")
-                                else:
-                                    st.error("❌ cdf command not available")
-                                
-                                if summary.get('cli_tool_confirmed'):
-                                    st.success("✅ Toolkit is CLI-based (correct!)")
-                                    st.info("💡 cognite-toolkit is a CLI tool, not a Python library")
-                                
-                                if summary.get('ready_for_production'):
-                                    st.success("🎉 READY FOR PRODUCTION USE!")
-                            
-                            # Show detailed results
-                            with st.expander("🔍 Detailed Results"):
-                                st.json(response_data)
-                            
-                            # Analyze results
-                            st.subheader("🎯 Analysis")
+                            deployment = response_data.get('deployment', {})
                             summary = response_data.get('summary', {})
                             
-                            if summary.get('toolkit_installed') and summary.get('cdf_command_available'):
-                                st.success("🎉 **BREAKTHROUGH CONFIRMED**: Real toolkit works in Functions!")
-                                st.balloons()  # Celebration!
-                                
-                                # Show key achievements
-                                st.subheader("🏆 Key Achievements")
+                            # Show deployment info
+                            if deployment:
                                 col1, col2 = st.columns(2)
-                                
                                 with col1:
-                                    st.metric("Toolkit Installed", "✅ SUCCESS", "cognite-toolkit-0.6.45")
-                                    st.metric("CDF Command Found", "✅ SUCCESS", "/home/.local/bin/cdf")
-                                    st.metric("PATH Fixed", "✅ SUCCESS", "Auto-added to PATH")
-                                
+                                    st.info(f"**Project**: `{deployment.get('project', 'N/A')}`")
                                 with col2:
-                                    st.metric("Build Command", "✅ WORKS", "Returns expected error")
-                                    st.metric("Deploy Command", "✅ WORKS", "Returns expected error") 
-                                    st.metric("Help Command", "✅ WORKS", "Full help output")
+                                    st.info(f"**Cluster**: `{deployment.get('cluster', 'N/A')}`")
                                 
-                                st.info("💡 **Next Step**: Implement full build/deploy workflow with real config files")
-                                st.info("🚀 **Impact**: Streamlit SaaS can now use real toolkit via Functions!")
-                                
-                            else:
-                                st.error("❌ Toolkit approach has limitations in Functions")
+                                st.success(f"📄 **Config**: `{deployment.get('config_file', 'N/A')}`")
+                            
+                            # Build Section
+                            if 'build' in deployment:
+                                with st.expander("🏗️ Build Output", expanded=True):
+                                    build = deployment['build']
+                                    if build.get('success'):
+                                        st.success(f"✅ Build completed successfully in {build.get('duration', 0)}s")
+                                    else:
+                                        st.error(f"❌ Build failed")
+                                    st.code(build.get('stdout', ''), language='text')
+                            
+                            # Dry-run Section
+                            if 'dry_run' in deployment:
+                                with st.expander("🔍 Dry-run Output", expanded=True):
+                                    dry_run = deployment['dry_run']
+                                    if dry_run.get('success'):
+                                        st.success(f"✅ Dry-run completed successfully in {dry_run.get('duration', 0)}s")
+                                    else:
+                                        st.error(f"❌ Dry-run failed")
+                                    st.code(dry_run.get('stdout', ''), language='text')
+                            
+                            # Deploy Section
+                            if 'deploy' in deployment:
+                                with st.expander("🚀 Deploy Output", expanded=True):
+                                    deploy = deployment['deploy']
+                                    if deploy.get('skipped'):
+                                        st.warning(f"⏭️ Deploy skipped: {deploy.get('reason', '')}")
+                                    elif deploy.get('success'):
+                                        st.success(f"✅ Deployment completed successfully in {deploy.get('duration', 0)}s")
+                                        st.balloons()
+                                    else:
+                                        st.error(f"❌ Deploy failed")
+                                    
+                                    if 'stdout' in deploy:
+                                        st.code(deploy.get('stdout', ''), language='text')
+                                    if deploy.get('stderr'):
+                                        st.error("Error output:")
+                                        st.code(deploy.get('stderr', ''), language='text')
+                            
+                            # Summary Section
+                            st.subheader("📊 Deployment Summary")
+                            col1, col2, col3 = st.columns(3)
+                            
+                            with col1:
+                                if summary.get('build_successful'):
+                                    st.metric("Build", "✅ SUCCESS")
+                                else:
+                                    st.metric("Build", "❌ FAILED")
+                            
+                            with col2:
+                                if summary.get('dry_run_successful'):
+                                    st.metric("Dry-run", "✅ SUCCESS")
+                                else:
+                                    st.metric("Dry-run", "❌ FAILED")
+                            
+                            with col3:
+                                if summary.get('deploy_successful'):
+                                    st.metric("Deploy", "✅ SUCCESS")
+                                elif summary.get('deploy_skipped'):
+                                    st.metric("Deploy", "⏭️ SKIPPED")
+                                else:
+                                    st.metric("Deploy", "❌ FAILED")
+                            
+                            # Full response in expander
+                            with st.expander("🔍 Full Response Data"):
+                                st.json(response_data)
                         else:
                             st.error("❌ No response data received")
                         

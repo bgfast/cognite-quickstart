@@ -1,0 +1,71 @@
+environment:
+  name: bgfast
+  project: bgfast
+  validation-type: dev
+  selected:
+  ### ===========================================
+  ### HELLO WORLD MODULES - Complete Demo Set
+  ### ===========================================
+  ### This configuration deploys a complete set
+  ### of Hello World examples demonstrating:
+  ### - Function + Streamlit integration
+  ### - NEAT data modeling with Excel
+  ### - Complete CRUD operations
+  ### - Real-world patterns and best practices
+  ### ===========================================
+  
+  ### Hello World Function Demo
+  - modules/hw-function                      ### Simple function + Streamlit integration
+  
+  ### Hello World NEAT Data Model
+  - modules/hw-neat                          ### Excel-based data modeling with NEAT
+
+variables:
+  # Hello World Function Configuration
+  hw_function_space: hw-function             # Name of the hello world function space
+  hw_function_dataset: hw-function-dataset   # Name of the hello world function dataset
+  
+  # Hello World NEAT Configuration
+  hw_neat_space: hw-neat                     # Name of the hello world NEAT space
+  hw_neat_container: HWNeatBasic             # Name of the NEAT container
+  hw_neat_view: HWNeatBasic                  # Name of the NEAT view
+  hw_neat_dataset: hw-neat-dataset           # Name of the NEAT dataset
+  hw_neat_test_prefix: hw_test_              # Prefix for test assets
+  hw_neat_sample_count: 10                   # Default number of sample assets
+  hw_neat_cleanup_enabled: true              # Enable cleanup of test data
+  
+  # Environment Configuration
+  default_location: hello-world              # Name of the location for demos
+  source_asset: hello-world                  # Source of the assets
+  source_event: hello-world                  # Source of the events
+  source_files: hello-world                  # Source of the files
+  source_timeseries: hello-world             # Source of the timeseries
+  source_simulated: hello-world              # Source for simulated data
+  
+  # Data Model Configuration
+  company_process_industries_extensions: hello_world_data  # Space for custom data model
+  company_process_industries_extensions_external_id: HelloWorld # Name of the custom data model
+  company_process_industries_extensions_external_id_destination: HelloWorld  # Hello World extension
+  
+  # Authentication Configuration
+  superuser_sourceid: ${SUPERUSER_SOURCEID_ENV} # Source id for the super users in auth
+  my_user_identifier: ${USER_IDENTIFIER}     # User identifier for custom_access_management
+  readwrite_source_id: ${SUPERUSER_SOURCEID_ENV}
+
+  # CDF Configuration (populated from .env file)
+  CDF_PROJECT: ${CDF_PROJECT}
+  CDF_CLUSTER: ${CDF_CLUSTER}
+  CDF_URL: https://${CDF_CLUSTER}.cognitedata.com
+  
+  # IDP Configuration
+  IDP_CLIENT_ID: ${IDP_CLIENT_ID}
+  IDP_CLIENT_SECRET: ${IDP_CLIENT_SECRET}
+  IDP_SCOPES: ${IDP_SCOPES}
+  IDP_TENANT_ID: ${IDP_TENANT_ID}
+  IDP_TOKEN_URL: ${IDP_TOKEN_URL}
+  
+  # Function Configuration
+  function_clientId: ${FUNCTION_CLIENT_ID}
+  function_clientSecret: ${FUNCTION_CLIENT_SECRET}
+  transformation_clientId: ${TRANSFORMATION_CLIENT_ID}
+  transformation_clientSecret: ${TRANSFORMATION_CLIENT_SECRET}
