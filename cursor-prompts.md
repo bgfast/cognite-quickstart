@@ -20,40 +20,51 @@ This file contains common commands and instructions for working with the Cognite
 
 ### Build Commands
 
+**CRITICAL**: Use `--env` flag (NOT `--config`) when specifying config files!
+
+```bash
+# ✅ CORRECT
+cdf build --env=hw-function          # Uses config.hw-function.yaml
+cdf deploy --env=hw-function --dry-run
+
+# ❌ WRONG
+cdf build --config config.hw-function.yaml   # Incorrect syntax
+```
+
 #### Build All Modules
 ```bash
 cdf build
 ```
 
-#### Build Specific Module
+#### Build Specific Module with Config File (Recommended)
 ```bash
-# App Packages Data Model (deploy first)
+# Use --env flag with config file base name (without config. prefix or .yaml suffix)
+cdf build --env=hw-function              # Uses config.hw-function.yaml
+cdf build --env=hw-neat                  # Uses config.hw-neat.yaml
+cdf build --env=all-hw                   # Uses config.all-hw.yaml
+cdf build --env=app-packages-dm          # Uses config.app-packages-dm.yaml
+cdf build --env=app-packages-zips        # Uses config.app-packages-zips.yaml
+cdf build --env=streamlit-github-deployer # Uses config.streamlit-github-deployer.yaml
+```
+
+#### Build Specific Module with Module Path (Alternative)
+```bash
+# Use -m flag to specify module directory directly
+cdf build -m modules/hw-function
+cdf build -m modules/hw-neat
 cdf build -m modules/app-packages-dm
-
-# App Packages Zip Files
 cdf build -m modules/app-packages-zips
-
-# GitHub Repo Deployer
 cdf build -m modules/admin/github-repo-deployer
-
-# Live Weather Data
 cdf build -m modules/in-development/live_weather_data
-
-# Foundation
 cdf build -m modules/common/foundation
-
-# Valhall Data Model
 cdf build -m modules/common/valhall_dm
 ```
 
-#### Build with Environment
+#### Build with Environment Type
 ```bash
 cdf build -e dev
 cdf build -e staging
 cdf build -e prod
-
-# App packages specific environment
-cdf build --env=app-packages-dm
 ```
 
 ### Deploy Commands
@@ -61,6 +72,8 @@ cdf build --env=app-packages-dm
 **📋 DEPLOYMENT WORKFLOW: "Deploy" always means: Build → Dry-run → Deploy**
 
 **⚠️ IMPORTANT: Always run `--dry-run` first to preview changes before actual deployment!**
+
+**⚠️ CRITICAL: Use `--env` flag (NOT `--config`) when specifying config files!**
 
 #### Deploy All (Full Workflow)
 ```bash
@@ -72,6 +85,21 @@ cdf deploy
 
 #### Deploy Specific Module (Full Workflow)
 ```bash
+# Hello World Function (uses config.hw-function.yaml)
+cdf build --env=hw-function
+cdf deploy --env=hw-function --dry-run
+cdf deploy --env=hw-function
+
+# Hello World NEAT (uses config.hw-neat.yaml)
+cdf build --env=hw-neat
+cdf deploy --env=hw-neat --dry-run
+cdf deploy --env=hw-neat
+
+# All Hello World modules (uses config.all-hw.yaml)
+cdf build --env=all-hw
+cdf deploy --env=all-hw --dry-run
+cdf deploy --env=all-hw
+
 # App Packages Data Model (uses config.app-packages-dm.yaml)
 cdf build --env=app-packages-dm
 cdf deploy --env=app-packages-dm --dry-run
@@ -207,12 +235,18 @@ creator: your.email@company.com
 # type: dev  →  validation-type: dev
 
 # Error: Directory structure incorrect
+# Example error: "StreamlitApp directory not found in .../streamlit/hello-world-streamlit
+#                 (based on externalId hello-world-streamlit)"
+# Cause: Directory name doesn't match externalId in YAML
 # Fix: Ensure structure matches:
 # streamlit/
-# ├── ExternalId/           ← Must match YAML externalId exactly
+# ├── ExternalId/           ← Must match YAML externalId EXACTLY (case-sensitive)
 # │   ├── main.py          ← Must be named main.py
 # │   └── requirements.txt
 # └── ExternalId.Streamlit.yaml
+#
+# CRITICAL: If externalId is "hw-function", directory MUST be "hw-function"
+# NOT "hello-world", NOT "HelloWorld", NOT "hw-function-app"
 ```
 
 ### Authentication Issues
@@ -234,6 +268,10 @@ gh auth status
 #### Pre-Deployment Testing (MANDATORY)
 ```bash
 # 1. SYNTAX CHECK - Always validate Python syntax first
+# Option A: Use helper script (recommended)
+python scripts/check_syntax.py modules/[app-name]/streamlit/[externalId]/main.py
+
+# Option B: Direct py_compile
 python -m py_compile modules/[app-name]/streamlit/[externalId]/main.py
 
 # 2. Always test locally before deploying
@@ -583,9 +621,81 @@ environment:
 # Check CDF documentation for valid properties of each view type
 ```
 
+## Hello World Modules
+
+### Purpose
+The Hello World (hw-*) modules are educational examples demonstrating CDF development patterns:
+
+1. **hw-function**: Function + Streamlit integration
+   - Simple function that receives input and returns greeting
+   - Streamlit UI for calling the function
+   - Real-time status updates and logs
+   - Complete request/response cycle
+
+2. **hw-neat**: Excel-based data modeling with NEAT
+   - Data model defined in Excel
+   - Automated YAML generation
+   - Streamlit app for CRUD operations
+   - Testing and validation suite
+
+### Naming Convention
+
+**CRITICAL**: All Hello World modules follow the `hw-*` naming pattern consistently:
+
+```
+modules/hw-function/
+├── functions/
+│   ├── hw-function.Function.yaml       # externalId: hw-function
+│   └── hw-function/                    # Directory matches externalId
+│       └── handler.py
+├── streamlit/
+│   ├── hw-function.Streamlit.yaml      # externalId: hw-function
+│   └── hw-function/                    # Directory matches externalId
+│       └── main.py
+├── data_sets/
+│   └── hw-function-dataset.DataSet.yaml
+└── module.toml
+
+config.hw-function.yaml                 # Config file naming
+```
+
+**Rules for consistent naming:**
+1. Module directory: `modules/hw-[name]/`
+2. Config file: `config.hw-[name].yaml`
+3. Function externalId: `hw-[name]`
+4. Function directory: `functions/hw-[name]/`
+5. Streamlit externalId: `hw-[name]` or `hw-[name]-ui`
+6. Streamlit directory: `streamlit/hw-[name]/`
+7. Dataset externalId: `hw-[name]-dataset`
+8. All references in code use `hw-[name]`
+
+### Deployment
+
+```bash
+# Deploy individual module
+cdf build --env=hw-function
+cdf deploy --env=hw-function --dry-run
+cdf deploy --env=hw-function
+
+# Deploy all Hello World modules
+cdf build --env=all-hw
+cdf deploy --env=all-hw --dry-run
+cdf deploy --env=all-hw
+```
+
+### Documentation
+
+- `readme.hw-function.md` - Function module guide
+- `readme.hw-neat.md` - NEAT module guide
+- `readme.hw-all.md` - Complete Hello World guide
+- `docs/requirements.hw.md` - Comprehensive requirements checklist
+
 ## File Locations
 
 ### Configuration Files
+- `config.hw-function.yaml` - Hello World Function demo
+- `config.hw-neat.yaml` - Hello World NEAT demo
+- `config.all-hw.yaml` - All Hello World modules
 - `config.dev.yaml` - Development environment config
 - `config.staging.yaml` - Staging environment config  
 - `config.prod.yaml` - Production environment config
@@ -597,10 +707,12 @@ environment:
 - `cdfenv.sh` - Environment variables template
 
 ### Module Directories
+- `modules/hw-function/` - Hello World Function + Streamlit demo
+- `modules/hw-neat/` - Hello World NEAT data model with Excel generation and Streamlit apps
 - `modules/app-packages-dm/` - Data model for app packages (foundational)
 - `modules/app-packages-zips/` - Zip file management and uploads
 - `modules/streamlit-github-deployer/` - Streamlit app for CDF-integrated GitHub deployment
-- `modules/neat-basic/` - NEAT Basic data model with Excel generation and Streamlit apps
+- `modules/neat-basic/` - (DEPRECATED: Use hw-neat) NEAT Basic data model
 - `modules/common/foundation/` - Basic CDF setup (groups, datasets)
 - `modules/common/valhall_dm/` - Valhall data model and transformations
 - `modules/in-development/live_weather_data/` - Weather data integration
@@ -1176,15 +1288,25 @@ Deploy the complete NEAT Basic system: Excel → YAML → Deploy → Streamlit a
 ```
 Set up a new Streamlit app following the standard pattern:
 1. Create module directory structure with module.toml
-2. Create streamlit/[externalId]/ directory matching YAML externalId exactly
-3. Place YAML file in streamlit/ directory (not module root)
-4. Create data_sets/[dataset-name].DataSet.yaml if referenced
-5. Set up YAML with version in description (quote if contains colons)
-6. Create main.py with SaaS-compatible CogniteClient
-7. Add pyodide-http to requirements.txt
-8. Add version in 3 required locations
-9. Create config file for deployment with hardcoded project name
-10. TEST LOCALLY: streamlit run main.py before deploying
+2. Choose consistent naming convention (e.g., hw-myapp for all components)
+3. Create streamlit/[externalId]/ directory matching YAML externalId EXACTLY
+   - If YAML has externalId: hw-function, directory MUST be hw-function
+   - Case-sensitive, no variations allowed
+4. Place YAML file in streamlit/ directory (not module root)
+   - Name: [externalId].Streamlit.yaml (e.g., hw-function.Streamlit.yaml)
+5. Create data_sets/[dataset-name].DataSet.yaml if referenced
+6. Set up YAML with version in description (quote if contains colons)
+7. Create main.py with SaaS-compatible CogniteClient
+8. Add pyodide-http to requirements.txt
+9. Add version in 3 required locations
+10. Create config file for deployment with hardcoded project name
+    - Name: config.[module-name].yaml (e.g., config.hw-function.yaml)
+11. Use consistent externalIds throughout:
+    - Function: hw-function
+    - Streamlit: hw-function (or hw-function-ui if multiple apps)
+    - Dataset: hw-function-dataset
+12. TEST LOCALLY: streamlit run main.py before deploying
+13. Build with: cdf build --env=[module-name] (not --config)
 ```
 
 ### "Fix Streamlit SaaS deployment error"
@@ -1195,16 +1317,37 @@ Check and fix st.set_page_config() placement and version number consistency
 ### "Fix Streamlit directory structure"
 ```
 Correct Streamlit app directory structure to match Cognite Toolkit requirements:
-1. Create module.toml in module root if missing
-2. Move YAML file to streamlit/ directory if in module root
-3. Create subdirectory matching externalId from YAML exactly
-4. Move Python file to subdirectory and rename to main.py
-5. Copy requirements.txt to each subdirectory
-6. Update YAML entrypoint to main.py
-7. Add required creator field to YAML
-8. Remove unused YAML parameters that cause warnings
-9. Add pyodide-http to requirements.txt
-10. Create dataset YAML if referenced in dataSetExternalId
+
+CRITICAL: Directory name MUST exactly match externalId in YAML file!
+
+Example error: "StreamlitApp directory not found in .../streamlit/hello-world
+              (based on externalId hello-world-streamlit)"
+This means: directory is "hello-world" but externalId is "hello-world-streamlit"
+
+Fix steps:
+1. Check externalId in YAML file (e.g., externalId: hw-function)
+2. Rename directory to match EXACTLY (e.g., mv hello-world hw-function)
+3. Verify directory name matches externalId character-by-character
+4. Create module.toml in module root if missing
+5. Move YAML file to streamlit/ directory if in module root
+6. Rename YAML to [externalId].Streamlit.yaml (e.g., hw-function.Streamlit.yaml)
+7. Ensure Python file inside directory is named main.py
+8. Copy requirements.txt to subdirectory if missing
+9. Update YAML entrypoint to main.py
+10. Add required creator field to YAML
+11. Remove unused YAML parameters that cause warnings
+12. Add pyodide-http to requirements.txt
+13. Create dataset YAML if referenced in dataSetExternalId
+14. Use consistent naming across all module components
+
+Naming consistency example (hw-function module):
+- Module directory: modules/hw-function/
+- Function externalId: hw-function
+- Function directory: functions/hw-function/
+- Streamlit externalId: hw-function
+- Streamlit directory: streamlit/hw-function/
+- Dataset externalId: hw-function-dataset
+- Config file: config.hw-function.yaml
 ```
 
 ### "Fix Streamlit build warnings"
@@ -1236,6 +1379,41 @@ When Streamlit fails in SaaS but works locally:
 4. Check imports and dependencies
 5. Look for environment-specific differences
 6. Add debug output to identify the exact failure point
+```
+
+## Build and Deploy Command Reference
+
+### **CRITICAL: Use --env flag, NOT --config flag**
+
+```bash
+# ✅ CORRECT: Use --env with just the environment name
+cdf build --env=hw-function          # Looks for config.hw-function.yaml
+cdf deploy --env=hw-function --dry-run
+cdf deploy --env=hw-function
+
+# ❌ WRONG: Don't use --config with full filename
+cdf build --config config.hw-function.yaml   # INCORRECT SYNTAX
+```
+
+The toolkit automatically adds "config." prefix and ".yaml" suffix when using --env flag.
+
+### **Hello World Modules Deployment**
+
+```bash
+# Deploy hw-function (Function + Streamlit demo)
+cdf build --env=hw-function
+cdf deploy --env=hw-function --dry-run
+cdf deploy --env=hw-function
+
+# Deploy hw-neat (NEAT data model demo)
+cdf build --env=hw-neat
+cdf deploy --env=hw-neat --dry-run
+cdf deploy --env=hw-neat
+
+# Deploy all Hello World modules
+cdf build --env=all-hw
+cdf deploy --env=all-hw --dry-run
+cdf deploy --env=all-hw
 ```
 
 ## Deployment Workflow Definition

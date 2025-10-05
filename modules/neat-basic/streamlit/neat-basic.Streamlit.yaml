@@ -1,6 +1,0 @@
-externalId: neat-basic
-name: NEAT Basic
-creator: brent.groom@cognitedata.com
-description: "v1.03 - Streamlined NEAT data management interface"
-entrypoint: main.py
-dataSetExternalId: neat-basic-dataset

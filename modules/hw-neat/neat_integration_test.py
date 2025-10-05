@@ -35,7 +35,7 @@ class NeatIntegrationTester:
         """Initialize the integration tester"""
         self.project_path = Path("/Users/brent.groom@cognitedata.com/p/cognite-quickstart")
         self.build_dir = self.project_path / "build"
-        self.neat_module_path = self.project_path / "modules" / "neat-basic"
+        self.neat_module_path = self.project_path / "modules" / "hw-neat"
         self.build_env_name = "weather"  # Using existing environment
         
         self.tester = None
@@ -59,7 +59,7 @@ class NeatIntegrationTester:
         checks['toolkit_available'] = BuildCommand is not None
         
         # NEAT module files
-        checks['neat_space'] = (self.neat_module_path / "data_models" / "neat-basic.space.yaml").exists()
+        checks['neat_space'] = (self.neat_module_path / "data_models" / "hw-neat.space.yaml").exists()
         checks['neat_container'] = (self.neat_module_path / "data_models" / "containers" / "BasicAsset.container.yaml").exists()
         checks['neat_view'] = (self.neat_module_path / "data_models" / "views" / "BasicAsset.view.yaml").exists()
         
@@ -79,7 +79,7 @@ class NeatIntegrationTester:
         return all_good
     
     def run_toolkit_build(self) -> Dict[str, Any]:
-        """Run toolkit build for neat-basic module"""
+        """Run toolkit build for hw-neat module"""
         if not BuildCommand:
             return {"success": False, "error": "Toolkit not available"}
         
@@ -92,15 +92,15 @@ class NeatIntegrationTester:
             print(f"📁 Project: {self.project_path}")
             print(f"🏗️  Build dir: {self.build_dir}")
             print(f"📋 Environment: {self.build_env_name}")
-            print(f"🎯 Module: neat-basic")
+            print(f"🎯 Module: hw-neat")
             print()
             
-            # Execute build for neat-basic module only
+            # Execute build for hw-neat module only
             result = build_cmd.execute(
                 verbose=True,
                 organization_dir=self.project_path,
                 build_dir=self.build_dir,
-                selected=["neat-basic"],  # Build only neat-basic module
+                selected=["hw-neat"],  # Build only hw-neat module
                 build_env_name=self.build_env_name,
                 no_clean=False,
                 client=None,

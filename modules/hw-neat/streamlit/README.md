@@ -2,7 +2,7 @@
 
 This directory contains a comprehensive Streamlit application for managing the NEAT Basic data model.
 
-## 🔧 NEAT Basic (`neat-basic`)
+## 🔧 NEAT Basic (`hw-neat`)
 
 A complete interface for **managing data** in your NEAT Basic data model.
 
@@ -27,13 +27,13 @@ Run the apps locally for development:
 
 ```bash
 # Navigate to the streamlit directory
-cd modules/neat-basic/streamlit
+cd modules/hw-neat/streamlit
 
 # Install dependencies
 pip install -r requirements.txt
 
 # Run the NEAT Basic app
-cd neat-basic
+cd hw-neat
 streamlit run main.py
 ```
 
@@ -43,10 +43,10 @@ Deploy to Cognite Data Fusion using the toolkit:
 
 ```bash
 # Build the project (includes Streamlit apps)
-cdf build --env neat-basic
+cdf build --env hw-neat
 
 # Deploy to CDF
-cdf deploy --env neat-basic
+cdf deploy --env hw-neat
 ```
 
 The app will be available in your CDF project under the Streamlit section as "NEAT Basic".

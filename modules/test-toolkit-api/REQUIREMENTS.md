@@ -299,7 +299,55 @@ CDF Project (auto-detected)
 - ✅ All logs stream in real-time
 - ✅ Errors are clearly reported
 
-## Open Questions
+## Configuration Management Pattern
+
+### Project Name Injection (CRITICAL)
+
+**Requirement**: All config files must have the real project name injected, not variables.
+
+**Why**: Config files often contain placeholders like:
+- `project: ${CDF_PROJECT}`
+- `project: {{ CDF_PROJECT }}`
+- `project: <change-me>`
+- `project: your-project-here`
+
+**Solution**: The function automatically replaces ANY value in the `project:` field with the actual project name from `client.config.project`.
+
+**Implementation**:
+```python
+# Auto-detect project
+project = client.config.project
+
+# Read config file
+with open(config_file, 'r') as f:
+    lines = f.readlines()
+
+# Replace project line (always at start of line, no indentation)
+for i, line in enumerate(lines):
+    if line.startswith('project:'):
+        lines[i] = f'project: {project}\n'
+        break
+
+# Write back
+with open(config_file, 'w') as f:
+    f.writelines(lines)
+```
+
+**Result**: 
+- Before: `project: ${CDF_PROJECT}`
+- After: `project: bluefield-test`
+
+**Benefits**:
+- ✅ Works against any CDF project
+- ✅ No manual configuration needed
+- ✅ Portable across environments
+- ✅ Handles all placeholder patterns
+
+**Pattern for Future**: This same approach will be used for ALL config files we work with.
+
+## Open Questions (Deferred)
+
+These questions are documented but not being addressed in Phase 1:
 
 1. **Deployment Safety**: Should we require explicit user confirmation for actual deployment (not dry-run)?
 2. **Config Validation**: Should we validate config files before deployment?

@@ -1,8 +1,0 @@
-externalId: hello-world-streamlit
-name: Hello World Function Demo
-creator: brent.groom@cognitedata.com
-description: "Demonstration of Cognite Function and Streamlit integration with hello world example"
-published: true
-theme: Light
-entrypoint: main.py
-dataSetExternalId: hw-function-dataset
