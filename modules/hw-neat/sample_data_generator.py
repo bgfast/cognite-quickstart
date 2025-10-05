@@ -36,7 +36,7 @@ class SampleDataGenerator:
     def __init__(self, client: CogniteClient = None):
         """Initialize the generator"""
         self.client = client or self._create_client()
-        self.space_id = "neat-basic"
+        self.space_id = "hw-neat"
         self.container_id = "BasicAsset"
         
         # Sample asset templates

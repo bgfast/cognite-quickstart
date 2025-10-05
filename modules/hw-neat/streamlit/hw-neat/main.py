@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-NEAT Basic - Streamlit App
+Hello World NEAT - Streamlit App
 
-This Streamlit app provides an interface for managing data in the NEAT Basic data model.
-Users can create, view, and manage NeatBasic instances through a user-friendly web interface.
+This Streamlit app provides an interface for managing data in the Hello World NEAT data model.
+Users can create, view, and manage Hello World NEAT instances through a user-friendly web interface.
 """
 
 import streamlit as st
@@ -21,11 +21,11 @@ from data_modeling import View
 # Initialize NEAT view wrapper for Data Model integration
 @st.cache_resource
 def get_neat_view(_client):
-    """Initialize and return NeatBasic view wrapper."""
+    """Initialize and return Hello World NEAT view wrapper."""
     try:
         return View(_client, space="EDM-COR-ALL-NEAT", external_id="NeatBasic")
     except Exception as e:
-        st.error(f"Failed to initialize NEAT view: {str(e)}")
+        st.error(f"Failed to initialize Hello World NEAT view: {str(e)}")
         return None
 
 @st.cache_resource
@@ -49,7 +49,7 @@ def get_client():
 
 
 class NeatDataManager:
-    """Handler for managing data in NEAT Basic data model"""
+    """Handler for managing data in Hello World NEAT data model"""
     
     def __init__(self, client: CogniteClient, neat_view: View):
         """Initialize the data writer"""
@@ -58,7 +58,7 @@ class NeatDataManager:
         self.space_id = "EDM-COR-ALL-NEAT"  # From NEAT-generated space
     
     def create_neat_instance(self, external_id: str, properties: Dict[str, Any]) -> bool:
-        """Create a new NeatBasic instance"""
+        """Create a new Hello World NEAT instance"""
         try:
             self.neat_view.upsert_instance(
                 external_id=external_id,
@@ -72,7 +72,7 @@ class NeatDataManager:
             return False
     
     def get_existing_instances(self, limit: int = 50) -> List[Dict[str, Any]]:
-        """Get existing NeatBasic instances"""
+        """Get existing Hello World NEAT instances"""
         try:
             instances = self.neat_view.list_instances(space=self.space_id, limit=limit)
             return instances
@@ -85,21 +85,21 @@ class NeatDataManager:
 def main():
     """Main Streamlit app"""
     st.set_page_config(
-        page_title="NEAT Basic",
-        page_icon="🔧",
+        page_title="Hello World NEAT",
+        page_icon="👋",
         layout="wide"
     )
     
-    st.title("🔧 NEAT Basic")
-    st.markdown("Create and manage data in your NEAT Basic data model")
-    st.caption("Version 1.03 - Streamlined data management interface")
+    st.title("👋 Hello World NEAT")
+    st.markdown("Create and manage data in your Hello World NEAT data model")
+    st.caption("Version 1.0 - Hello World NEAT data management demo")
     
     # Initialize client and view
     client = get_client()
     neat_view = get_neat_view(_client=client)
     
     if not neat_view:
-        st.error("❌ Failed to initialize NEAT view. Please check your data model deployment.")
+        st.error("❌ Failed to initialize Hello World NEAT view. Please check your data model deployment.")
         st.stop()
     
     # Initialize data manager
@@ -122,7 +122,7 @@ def main():
 
 def create_instance_form(manager: NeatDataManager):
     """Form for creating a single instance"""
-    st.header("🆕 Create New NEAT Instance")
+    st.header("🆕 Create New Hello World NEAT Instance")
     
     with st.form("create_instance"):
         col1, col2 = st.columns(2)
@@ -131,7 +131,7 @@ def create_instance_form(manager: NeatDataManager):
             external_id = st.text_input(
                 "External ID",
                 help="Unique identifier for this instance",
-                placeholder="e.g., neat_item_001"
+                placeholder="e.g., hw_neat_item_001"
             )
             
         with col2:
@@ -205,7 +205,7 @@ def create_instance_form(manager: NeatDataManager):
 
 def view_existing_instances(manager: NeatDataManager):
     """View existing instances"""
-    st.header("📋 Existing NEAT Instances")
+    st.header("📋 Existing Hello World NEAT Instances")
     
     col1, col2 = st.columns([3, 1])
     
@@ -252,7 +252,7 @@ def view_existing_instances(manager: NeatDataManager):
             st.download_button(
                 label="Download CSV",
                 data=csv,
-                file_name=f"neat_instances_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                file_name=f"hw_neat_instances_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
                 mime="text/csv"
             )
     else:
@@ -261,7 +261,7 @@ def view_existing_instances(manager: NeatDataManager):
 
 def bulk_import_form(manager: NeatDataManager):
     """Form for bulk importing instances"""
-    st.header("📤 Bulk Import NEAT Instances")
+    st.header("📤 Bulk Import Hello World NEAT Instances")
     
     st.markdown("""
     Upload a CSV file with the following columns:

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-Generate NEAT Basic YAML files using NEAT (Network Extraction and Analysis Tool)
+Generate Hello World NEAT YAML files using NEAT (Network Extraction and Analysis Tool)
 This script processes the NeatBasic.xlsx data model file and generates CDF Toolkit YAML files.
 
 Usage:
-    cd modules/neat-basic
+    cd modules/hw-neat
     python generate_edm_yaml_files.py
 
 Requirements:
@@ -155,7 +155,7 @@ def main():
     
     if not excel_file.exists():
         print(f"⚠️  Excel file not found at: {excel_file}")
-        print("Please run this script from the neat-basic module directory")
+        print("Please run this script from the hw-neat module directory")
         print("Expected file: data_models/NeatBasic.xlsx")
         return
     
@@ -171,9 +171,9 @@ def main():
         print("\n🎉 NEAT Basic YAML generation completed successfully!")
         print("📁 Generated files are in the data_models/ directory")
         print("\n🔧 Next steps:")
-        print("  1. Deploy using: cdf-tk build --env neat-basic")
-        print("  2. Test deployment: cdf-tk deploy --env neat-basic --dry-run")
-        print("  3. Deploy for real: cdf-tk deploy --env neat-basic")
+        print("  1. Deploy using: cdf build --config config.hw-neat.yaml")
+        print("  2. Test deployment: cdf deploy --config config.hw-neat.yaml --dry-run")
+        print("  3. Deploy for real: cdf deploy --config config.hw-neat.yaml")
         print("  4. Run tests: python test_neat_data_model.py")
         print("  5. Generate sample data: python sample_data_generator.py")
         print("  6. Run integration tests: python neat_integration_test.py")

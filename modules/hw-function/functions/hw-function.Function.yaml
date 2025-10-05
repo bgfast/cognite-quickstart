@@ -1,5 +1,5 @@
 - name: Hello World Function
-  externalId: hello-world-function
+  externalId: hw-function
   owner: brent.groom@cognitedata.com
   description: Simple hello world function that demonstrates function-streamlit integration
   cpu: 0.25

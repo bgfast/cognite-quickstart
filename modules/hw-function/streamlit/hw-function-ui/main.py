@@ -8,7 +8,7 @@ import streamlit as st
 import time
 from datetime import datetime
 
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 
 
 @st.cache_resource
@@ -19,7 +19,7 @@ def get_cognite_client():
 
 
 def call_hello_world_function():
-    """Call the hello-world function and display results"""
+    """Call the hw-function and display results"""
     st.header("👋 Hello World Function Demo")
     st.write("This demo shows how a Streamlit app can call a Cognite Function and display the full response.")
     
@@ -27,32 +27,53 @@ def call_hello_world_function():
     st.subheader("📝 Input")
     name = st.text_input("Enter your name:", value="World", placeholder="Your name here...")
     
-    # Call function button
+    # Initialize session state
+    if 'function_triggered' not in st.session_state:
+        st.session_state.function_triggered = False
+    if 'function_name' not in st.session_state:
+        st.session_state.function_name = None
+    
+    # Call function button - just sets flag, doesn't do processing
     if st.button("🚀 Call Hello World Function", type="primary"):
         if not name:
             st.error("Please enter a name")
-            return
+        else:
+            # Set session state and trigger rerun
+            st.session_state.function_triggered = True
+            st.session_state.function_name = name
+            st.rerun()  # Immediate rerun shows feedback instantly
+    
+    # ====================================================================
+    # PROCESS FUNCTION CALL - Runs outside button handler for instant feedback
+    # ====================================================================
+    if st.session_state.function_triggered:
+        # Reset flag
+        st.session_state.function_triggered = False
+        
+        # INSTANT FEEDBACK - Shows immediately on rerun
+        st.success("🚀 **Button clicked!** Processing your request...")
+        
+        # Create containers for live updates
+        status_container = st.empty()
         
         try:
-            # Get cached client
-            with st.spinner("🔌 Connecting to Cognite..."):
-                client = get_cognite_client()
-            
-            st.success(f"✅ Connected to project: {client.config.project}")
+            # Get cached client (instant because cache is warm)
+            status_container.info("🔌 Getting Cognite client...")
+            client = get_cognite_client()
             
             # Call the function
-            with st.spinner(f"📞 Calling function with name='{name}'..."):
-                call_result = client.functions.call(
-                    external_id="hello-world-function",
-                    data={"name": name}
-                )
+            status_container.info(f"📞 Calling function with name='{st.session_state.function_name}'...")
+            call_result = client.functions.call(
+                external_id="hw-function",
+                data={"name": st.session_state.function_name}
+            )
             
-            st.success(f"✅ Function called! Call ID: {call_result.id}")
+            status_container.success(f"✅ Function called! Call ID: {call_result.id}")
             
             # Wait for result with progress
             st.subheader("⏳ Waiting for Response")
             progress_bar = st.progress(0)
-            status_placeholder = st.empty()
+            result_status = st.empty()
             logs_container = st.container()
             
             max_wait = 60  # 1 minute
@@ -61,18 +82,18 @@ def call_hello_world_function():
             while wait_time < max_wait:
                 # Get function call status
                 call_status = client.functions.calls.retrieve(
-                    function_external_id="hello-world-function",
+                    function_external_id="hw-function",
                     call_id=call_result.id
                 )
                 
                 progress = min(wait_time / max_wait, 0.95)
                 progress_bar.progress(progress)
-                status_placeholder.text(f"Status: {call_status.status} ({wait_time}s)")
+                result_status.text(f"Status: {call_status.status} ({wait_time}s)")
                 
                 # Get logs
                 try:
                     logs = client.functions.calls.get_logs(
-                        function_external_id="hello-world-function",
+                        function_external_id="hw-function",
                         call_id=call_result.id
                     )
                     
@@ -88,11 +109,11 @@ def call_hello_world_function():
                 
                 if call_status.status == "Completed":
                     progress_bar.progress(1.0)
-                    status_placeholder.text("✅ Function completed!")
+                    result_status.text("✅ Function completed!")
                     
                     # Get the result
                     result = client.functions.calls.retrieve(
-                        function_external_id="hello-world-function",
+                        function_external_id="hw-function",
                         call_id=call_result.id
                     )
                     
@@ -154,7 +175,7 @@ def show_info():
     """Show information about the demo"""
     st.sidebar.header("ℹ️ About")
     st.sidebar.write(f"**Version**: {VERSION}")
-    st.sidebar.write(f"**Function**: hello-world-function")
+    st.sidebar.write(f"**Function**: hw-function")
     st.sidebar.write(f"**Runtime**: Python 3.11")
     
     st.sidebar.markdown("---")
@@ -170,7 +191,7 @@ def show_info():
     st.sidebar.markdown("---")
     st.sidebar.subheader("🔧 Components")
     st.sidebar.write("""
-    - **Cognite Function**: `hello-world-function`
+    - **Cognite Function**: `hw-function`
     - **Handler**: Simple Python function
     - **Input**: Name from Streamlit form
     - **Output**: JSON response with greeting
@@ -180,7 +201,7 @@ def show_info():
 def main():
     """Main Streamlit app"""
     st.set_page_config(
-        page_title="Hello World Function Demo",
+        page_title="Hello World Function Demo v1.1",
         page_icon="👋",
         layout="wide"
     )
@@ -190,11 +211,18 @@ def main():
     
     # Main content
     st.title("👋 Hello World: Function + Streamlit")
-    st.caption(f"Demo of Cognite Function and Streamlit integration • Version {VERSION}")
+    st.caption(f"Version {VERSION} - Immediate feedback on button click")
     
     st.markdown("---")
     
-    # Call function interface
+    # PRE-INITIALIZE CLIENT - Warm up the cache so button clicks are instant
+    with st.spinner("🔌 Initializing Cognite connection..."):
+        client = get_cognite_client()
+    
+    st.success(f"✅ Ready! Connected to: {client.config.project}")
+    st.markdown("---")
+    
+    # Call function interface (will use cached client)
     call_hello_world_function()
     
     # Footer

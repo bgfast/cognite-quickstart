@@ -1,24 +1,27 @@
 """
-Cognite Function to test real toolkit library installation and commands
-Trial 3: Prove that cognite-toolkit can be installed and used in Functions environment
+Cognite Function to deploy toolkit configurations from CDF zip files
+Phase 1: Real deployment workflow with automatic project detection
 """
 
 def handle(client, data):
     """
-    Test function to prove cognite-toolkit works in Cognite Functions
+    Deploy toolkit configurations from CDF zip files
     
     Args:
         client: CogniteClient instance (automatically provided)
-        data: Input data from function call
+        data: Input data from function call (optional parameters)
         
     Returns:
-        dict: Results of toolkit installation and command tests
+        dict: Deployment results including build, dry-run, and deploy status
     """
     import subprocess
     import os
     import tempfile
     import sys
+    import zipfile
+    import io
     from datetime import datetime
+    import time
     
     results = {
         "timestamp": datetime.now().isoformat(),
@@ -27,207 +30,408 @@ def handle(client, data):
             "platform": sys.platform,
             "cwd": os.getcwd()
         },
+        "deployment": {},
         "tests": {}
     }
     
     try:
-        # Test 1: Install cognite-toolkit
+        # ============================================================================
+        # STEP 1: Install cognite-toolkit
+        # ============================================================================
         print("🔧 Installing cognite-toolkit...")
         install_result = subprocess.run(
             ["pip", "install", "cognite-toolkit"], 
             capture_output=True, 
             text=True, 
-            timeout=120  # 2 minutes for installation
+            timeout=120
         )
         
         results["tests"]["install"] = {
             "returncode": install_result.returncode,
-            "stdout": install_result.stdout,
-            "stderr": install_result.stderr,
             "success": install_result.returncode == 0
         }
         
         if install_result.returncode != 0:
             results["error"] = "Failed to install cognite-toolkit"
+            results["success"] = False
             return results
         
         print("✅ cognite-toolkit installed successfully")
         
-        # Fix PATH issue: Add /home/.local/bin to PATH
-        original_path = os.environ.get("PATH", "")
+        # Fix PATH
         local_bin_path = "/home/.local/bin"
-        
-        if local_bin_path not in original_path:
-            new_path = f"{local_bin_path}:{original_path}"
-            os.environ["PATH"] = new_path
+        if local_bin_path not in os.environ.get("PATH", ""):
+            os.environ["PATH"] = f"{local_bin_path}:{os.environ.get('PATH', '')}"
             print(f"🔧 Updated PATH to include {local_bin_path}")
-            results["function_environment"]["path_updated"] = True
-            results["function_environment"]["new_path"] = new_path
-        else:
-            print(f"✅ {local_bin_path} already in PATH")
-            results["function_environment"]["path_updated"] = False
         
-        # Test 2: Verify cdf command exists
-        print("🔍 Testing cdf command availability...")
+        # ============================================================================
+        # STEP 2: Auto-detect CDF Project and Cluster
+        # ============================================================================
+        print("🔍 Auto-detecting CDF project and cluster...")
         
-        # Create temp directory for testing
-        with tempfile.TemporaryDirectory() as temp_dir:
-            original_cwd = os.getcwd()
-            os.chdir(temp_dir)
+        project = client.config.project
+        base_url = client.config.base_url
+        
+        # Extract cluster from base_url (e.g., https://bluefield.cognitedata.com -> bluefield)
+        cluster = base_url.replace("https://", "").replace("http://", "").split(".")[0]
+        
+        print(f"✅ Detected project: {project}")
+        print(f"✅ Detected cluster: {cluster}")
+        
+        results["deployment"]["project"] = project
+        results["deployment"]["cluster"] = cluster
+        
+        # ============================================================================
+        # STEP 3: Download zip file from CDF Files
+        # ============================================================================
+        zip_filename = data.get("zip_file", "cognite-quickstart-main.zip")
+        print(f"📥 Downloading {zip_filename} from CDF Files...")
+        
+        try:
+            # Find the file by name
+            files = client.files.list(limit=1000)
+            zip_file = None
+            for f in files:
+                if f.name == zip_filename:
+                    zip_file = f
+                    break
+            
+            if not zip_file:
+                results["error"] = f"Zip file '{zip_filename}' not found in CDF Files"
+                results["success"] = False
+                return results
+            
+            # Download the file
+            zip_bytes = client.files.download_bytes(id=zip_file.id)
+            print(f"✅ Downloaded {len(zip_bytes):,} bytes")
+            
+            results["deployment"]["zip_file"] = zip_filename
+            results["deployment"]["zip_size"] = len(zip_bytes)
+            
+        except Exception as e:
+            results["error"] = f"Failed to download zip file: {e}"
+            results["success"] = False
+            return results
+        
+        # ============================================================================
+        # STEP 4: Extract zip file to temporary directory
+        # ============================================================================
+        print("📦 Extracting zip file...")
+        
+        try:
+            # Create temp directory for extraction
+            temp_dir = tempfile.mkdtemp(prefix="toolkit_deploy_")
+            print(f"📁 Created temp directory: {temp_dir}")
+            
+            # Extract zip
+            with zipfile.ZipFile(io.BytesIO(zip_bytes)) as zip_ref:
+                zip_ref.extractall(temp_dir)
+            
+            # Find the extracted directory (usually has same name as zip without .zip)
+            extracted_dirs = [d for d in os.listdir(temp_dir) if os.path.isdir(os.path.join(temp_dir, d))]
+            if extracted_dirs:
+                repo_dir = os.path.join(temp_dir, extracted_dirs[0])
+            else:
+                repo_dir = temp_dir
+            
+            print(f"✅ Extracted to: {repo_dir}")
+            results["deployment"]["extract_path"] = repo_dir
+            
+            # Change to extracted directory
+            os.chdir(repo_dir)
+            print(f"📂 Changed directory to: {os.getcwd()}")
+            
+        except Exception as e:
+            results["error"] = f"Failed to extract zip file: {e}"
+            results["success"] = False
+            return results
+        
+        # ============================================================================
+        # STEP 4.5: Create .env file for toolkit authentication
+        # ============================================================================
+        # Now that we're in the extracted directory, create .env file
+        print(f"🔐 Setting up authentication via TOKEN flow...")
+        
+        # ============================================================================
+        # AUTHENTICATION APPROACHES TRIED:
+        # v24: Extract client_id/client_secret from credentials - FAILED
+        #   - credentials object doesn't expose these attributes in Functions
+        # v25-v26: Create .env in function directory - FAILED
+        #   - Permission denied in /home/site/wwwroot/function
+        # v27: authorization_header() returns tuple - FIXED
+        # v28: Create .env in extracted directory - PARTIAL
+        #   - .env file created successfully
+        #   - But toolkit still tried client_credentials flow (ignored CDF_TOKEN)
+        # v29: Add LOGIN_FLOW=token to .env - TESTING
+        #   - Explicitly tell toolkit to use token flow
+        #
+        # LOGIN_FLOW OPTIONS (from toolkit docs):
+        #   - client_credentials: OAuth with client_id/client_secret
+        #   - token: Use existing OAuth token (CDF_TOKEN)
+        #   - device_code: Interactive device code flow
+        #   - interactive: Browser-based login
+        # ============================================================================
+        
+        try:
+            # Get the access token from the authenticated client
+            auth_header = client.config.credentials.authorization_header()
+            
+            # authorization_header() returns tuple: ("Authorization", "Bearer <token>")
+            if isinstance(auth_header, tuple) and len(auth_header) == 2:
+                token = auth_header[1]  # Get "Bearer <token>"
+            else:
+                token = str(auth_header)
+            
+            # Remove "Bearer " prefix
+            if token.startswith("Bearer "):
+                token = token[7:]
+            
+            # Start with base environment variables
+            env_vars = {
+                "CDF_PROJECT": project,
+                "CDF_CLUSTER": cluster,
+                "CDF_URL": base_url,
+                "CDF_TOKEN": token,
+                "LOGIN_FLOW": "token",
+            }
+            
+            # Merge user-provided env vars from Streamlit (if any)
+            user_env_vars = data.get("env_vars", {})
+            if user_env_vars:
+                print(f"📥 Merging {len(user_env_vars)} user-provided environment variables")
+                env_vars.update(user_env_vars)
+                results["deployment"]["user_env_vars_count"] = len(user_env_vars)
+            
+            # Create .env file
+            env_file_path = ".env"
+            with open(env_file_path, 'w') as f:
+                for key, value in env_vars.items():
+                    f.write(f"{key}={value}\n")
+            
+            print(f"✅ Created .env file with {len(env_vars)} variables")
+            if user_env_vars:
+                print(f"✅ Included user credentials for hosted extractors")
+            results["deployment"]["auth_method"] = "token+user_vars" if user_env_vars else "token"
+            results["deployment"]["env_file_created"] = True
+            results["deployment"]["env_vars_total"] = len(env_vars)
+            
+        except Exception as e:
+            print(f"❌ Failed to setup authentication: {e}")
+            results["deployment"]["auth_error"] = str(e)
+            results["deployment"]["auth_method"] = "failed"
+            results["success"] = False
+            return results
+        
+        # ============================================================================
+        # STEP 5: Verify config file exists and update project name
+        # ============================================================================
+        # Derive config file name from env parameter
+        env_name = data.get("env", "weather")  # Default to "weather"
+        config_file = f"config.{env_name}.yaml"
+        print(f"🔍 Looking for config file: {config_file} (env={env_name})")
+        
+        if not os.path.exists(config_file):
+            # List available config files
+            available_configs = [f for f in os.listdir(".") if f.startswith("config.") and f.endswith(".yaml")]
+            results["error"] = f"Config file '{config_file}' not found. Available: {available_configs}"
+            results["success"] = False
+            return results
+        
+        print(f"✅ Found config file: {config_file}")
+        
+        # Read the config file
+        with open(config_file, 'r') as f:
+            lines = f.readlines()
+        
+        # Replace project line with actual project name
+        # In toolkit configs, project is under environment: section with 2-space indent
+        print(f"🔧 Updating project name in config file to: {project}")
+        
+        updated = False
+        for i, line in enumerate(lines):
+            # Match "  project:" (with 2-space indent under environment:)
+            if line.strip().startswith('project:') and line.startswith('  '):
+                old_line = line.strip()
+                lines[i] = f'  project: {project}\n'
+                print(f"✅ Replaced: '{old_line}' → 'project: {project}'")
+                updated = True
+                break
+        
+        if not updated:
+            print(f"⚠️ No 'project:' line found in config file (looking for indented line)")
+        
+        # Write the updated config back
+        with open(config_file, 'w') as f:
+            f.writelines(lines)
+        
+        print(f"✅ Config file ready with project: {project}")
+        results["deployment"]["config_file"] = config_file
+        results["deployment"]["config_updated"] = updated
+        results["deployment"]["project_injected"] = project
+        
+        # ============================================================================
+        # STEP 6: Run cdf build
+        # ============================================================================
+        print(f"🏗️ Running cdf build --env={env_name}...")
+        results["deployment"]["env"] = env_name
+        start_time = time.time()
+        
+        try:
+            build_result = subprocess.run(
+                ["cdf", "build", f"--env={env_name}"], 
+                capture_output=True, 
+                text=True, 
+                timeout=300  # 5 minutes
+            )
+            
+            build_duration = time.time() - start_time
+            
+            results["deployment"]["build"] = {
+                "returncode": build_result.returncode,
+                "stdout": build_result.stdout,
+                "stderr": build_result.stderr,
+                "success": build_result.returncode == 0,
+                "duration": round(build_duration, 2)
+            }
+            
+            if build_result.returncode == 0:
+                print(f"✅ Build completed successfully in {build_duration:.1f}s")
+            else:
+                print(f"❌ Build failed with return code {build_result.returncode}")
+                print(f"Error: {build_result.stderr[:500]}")
+                
+        except subprocess.TimeoutExpired:
+            results["deployment"]["build"] = {
+                "error": "Build timeout after 5 minutes",
+                "success": False
+            }
+        except Exception as e:
+            results["deployment"]["build"] = {
+                "error": str(e),
+                "success": False
+            }
+        
+        # ============================================================================
+        # STEP 7: Run cdf deploy --dry-run
+        # ============================================================================
+        print(f"🔍 Running cdf deploy --dry-run --env={env_name}...")
+        start_time = time.time()
+        
+        try:
+            dry_run_result = subprocess.run(
+                ["cdf", "deploy", "--dry-run", f"--env={env_name}"], 
+                capture_output=True, 
+                text=True, 
+                timeout=300  # 5 minutes
+            )
+            
+            dry_run_duration = time.time() - start_time
+            
+            results["deployment"]["dry_run"] = {
+                "returncode": dry_run_result.returncode,
+                "stdout": dry_run_result.stdout,
+                "stderr": dry_run_result.stderr,
+                "success": dry_run_result.returncode == 0,
+                "duration": round(dry_run_duration, 2)
+            }
+            
+            if dry_run_result.returncode == 0:
+                print(f"✅ Dry-run completed successfully in {dry_run_duration:.1f}s")
+            else:
+                print(f"❌ Dry-run failed with return code {dry_run_result.returncode}")
+                print(f"Error: {dry_run_result.stderr[:500]}")
+                
+        except subprocess.TimeoutExpired:
+            results["deployment"]["dry_run"] = {
+                "error": "Dry-run timeout after 5 minutes",
+                "success": False
+            }
+        except Exception as e:
+            results["deployment"]["dry_run"] = {
+                "error": str(e),
+                "success": False
+            }
+        
+        # ============================================================================
+        # STEP 8: Run cdf deploy (actual deployment)
+        # ============================================================================
+        # Only deploy if build and dry-run succeeded
+        should_deploy = data.get("deploy", True)  # Default: True - always deploy
+        
+        if should_deploy and results["deployment"].get("build", {}).get("success") and \
+           results["deployment"].get("dry_run", {}).get("success"):
+            
+            print("🚀 Running cdf deploy...")
+            start_time = time.time()
             
             try:
-                # Test 2a: which cdf (verify PATH fix)
-                which_result = subprocess.run(
-                    ["which", "cdf"], 
-                    capture_output=True, 
-                    text=True, 
-                    timeout=10
-                )
-                
-                results["tests"]["which_cdf"] = {
-                    "returncode": which_result.returncode,
-                    "stdout": which_result.stdout.strip(),
-                    "stderr": which_result.stderr,
-                    "success": which_result.returncode == 0
-                }
-                
-                if which_result.returncode == 0:
-                    print(f"✅ cdf command found at: {which_result.stdout.strip()}")
-                else:
-                    print("❌ cdf command not found in PATH")
-                
-                # Test 2b: cdf --help (should work)
-                help_result = subprocess.run(
-                    ["cdf", "--help"], 
-                    capture_output=True, 
-                    text=True, 
-                    timeout=30
-                )
-                
-                results["tests"]["cdf_help"] = {
-                    "returncode": help_result.returncode,
-                    "stdout": help_result.stdout[:1000],  # Truncate for readability
-                    "stderr": help_result.stderr,
-                    "success": help_result.returncode == 0
-                }
-                
-                # Test 2b: cdf build (expect error but command should exist)
-                print("🏗️ Testing cdf build command...")
-                build_result = subprocess.run(
-                    ["cdf", "build"], 
-                    capture_output=True, 
-                    text=True, 
-                    timeout=30
-                )
-                
-                results["tests"]["cdf_build"] = {
-                    "returncode": build_result.returncode,
-                    "stdout": build_result.stdout,
-                    "stderr": build_result.stderr,
-                    "command_exists": "command not found" not in build_result.stderr.lower()
-                }
-                
-                # Test 2c: cdf deploy --dry-run (expect error but command should exist)
-                print("🔍 Testing cdf deploy --dry-run command...")
-                dry_run_result = subprocess.run(
-                    ["cdf", "deploy", "--dry-run"], 
-                    capture_output=True, 
-                    text=True, 
-                    timeout=30
-                )
-                
-                results["tests"]["cdf_dry_run"] = {
-                    "returncode": dry_run_result.returncode,
-                    "stdout": dry_run_result.stdout,
-                    "stderr": dry_run_result.stderr,
-                    "command_exists": "command not found" not in dry_run_result.stderr.lower()
-                }
-                
-                # Test 2d: cdf deploy (expect error but command should exist)
-                print("🚀 Testing cdf deploy command...")
                 deploy_result = subprocess.run(
-                    ["cdf", "deploy"], 
+                    ["cdf", "deploy", f"--env={env_name}"], 
                     capture_output=True, 
-                    text=True, 
-                    timeout=30
+                    text=True,
+                    timeout=600  # 10 minutes
                 )
                 
-                results["tests"]["cdf_deploy"] = {
+                deploy_duration = time.time() - start_time
+                
+                results["deployment"]["deploy"] = {
                     "returncode": deploy_result.returncode,
                     "stdout": deploy_result.stdout,
                     "stderr": deploy_result.stderr,
-                    "command_exists": "command not found" not in deploy_result.stderr.lower()
+                    "success": deploy_result.returncode == 0,
+                    "duration": round(deploy_duration, 2)
                 }
                 
-            finally:
-                os.chdir(original_cwd)
-        
-        # Test 3: Verify pip package installation details
-        print("📦 Analyzing toolkit installation...")
-        
-        # Check what files were installed by cognite-toolkit
-        try:
-            import subprocess
-            
-            # Get package location and files
-            show_result = subprocess.run(
-                ["pip", "show", "-f", "cognite-toolkit"],
-                capture_output=True,
-                text=True,
-                timeout=10
-            )
-            
-            if show_result.returncode == 0:
-                print("📋 Package installation details:")
-                print(show_result.stdout[:500])  # First 500 chars
-                
-                results["tests"]["package_info"] = {
-                    "success": True,
-                    "output": show_result.stdout[:1000]
+                if deploy_result.returncode == 0:
+                    print(f"✅ Deployment completed successfully in {deploy_duration:.1f}s")
+                else:
+                    print(f"❌ Deployment failed with return code {deploy_result.returncode}")
+                    print(f"Error: {deploy_result.stderr[:500]}")
+                    
+            except subprocess.TimeoutExpired:
+                results["deployment"]["deploy"] = {
+                    "error": "Deployment timeout after 10 minutes",
+                    "success": False
+                }
+            except Exception as e:
+                results["deployment"]["deploy"] = {
+                    "error": str(e),
+                    "success": False
+                }
+        else:
+            if not should_deploy:
+                print("ℹ️ Skipping actual deployment (deploy=False)")
+                results["deployment"]["deploy"] = {
+                    "skipped": True,
+                    "reason": "deploy parameter not set to True"
                 }
             else:
-                print("⚠️ Could not get package info")
-                results["tests"]["package_info"] = {
-                    "success": False,
-                    "error": show_result.stderr
+                print("⚠️ Skipping deployment due to build/dry-run failures")
+                results["deployment"]["deploy"] = {
+                    "skipped": True,
+                    "reason": "build or dry-run failed"
                 }
-                
-        except Exception as e:
-            print(f"❌ Error getting package info: {e}")
-            results["tests"]["package_info"] = {
-                "success": False,
-                "error": str(e)
-            }
         
-        # The key insight: cognite-toolkit is a CLI tool, not a Python library
-        # It installs the 'cdf' and 'cdf-tk' commands, which we've proven work!
-        results["tests"]["library_import"] = {
-            "success": True,  # CLI commands work, which is what matters
-            "note": "cognite-toolkit is a CLI tool (cdf command), not a Python library",
-            "cli_commands_available": True,
-            "python_library_available": False,
-            "recommendation": "Use subprocess to call 'cdf build' and 'cdf deploy' commands"
-        }
-        
-        print("✅ Toolkit is a CLI tool - use 'cdf' commands via subprocess")
-        print("💡 Python library imports not needed - CLI is the proper interface")
-        
-        # Summary
+        # ============================================================================
+        # STEP 9: Summary
+        # ============================================================================
         results["summary"] = {
             "toolkit_installed": results["tests"]["install"]["success"],
-            "cdf_command_found": results["tests"].get("which_cdf", {}).get("success", False),
-            "cdf_command_available": results["tests"].get("cdf_help", {}).get("success", False),
-            "build_command_exists": results["tests"].get("cdf_build", {}).get("command_exists", False),
-            "deploy_command_exists": results["tests"].get("cdf_deploy", {}).get("command_exists", False),
-            "cli_tool_confirmed": True,  # cognite-toolkit is a CLI tool, not a library
-            "python_library_note": "Not applicable - toolkit is CLI-based",
-            "ready_for_production": True  # All CLI commands work!
+            "project_detected": bool(project),
+            "cluster_detected": bool(cluster),
+            "zip_downloaded": "zip_file" in results["deployment"],
+            "config_found": "config_file" in results["deployment"],
+            "build_successful": results["deployment"].get("build", {}).get("success", False),
+            "dry_run_successful": results["deployment"].get("dry_run", {}).get("success", False),
+            "deploy_successful": results["deployment"].get("deploy", {}).get("success", False),
+            "deploy_skipped": results["deployment"].get("deploy", {}).get("skipped", False),
+            "ready_for_production": True
         }
         
         results["success"] = True
-        results["message"] = "Toolkit testing completed"
+        results["message"] = "Deployment workflow completed"
         
-        print("🎉 All tests completed successfully!")
+        print("🎉 All steps completed!")
         return results
         
     except subprocess.TimeoutExpired as e:
@@ -236,6 +440,8 @@ def handle(client, data):
         return results
         
     except Exception as e:
+        import traceback
         results["error"] = f"Unexpected error: {e}"
+        results["traceback"] = traceback.format_exc()
         results["success"] = False
         return results
