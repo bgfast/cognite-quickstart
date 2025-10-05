@@ -8,12 +8,18 @@ Cognite Toolkit to upload to CDF.
 
 For each repository, this script creates TWO zip files:
 1. Full zip: Contains the complete repository (e.g., cognite-quickstart-main.zip)
-2. Mini zip: Contains only README*.md files (e.g., cognite-quickstart-main-mini.zip)
+2. Mini zip: Contains only config-specific README files (e.g., cognite-quickstart-main-mini.zip)
+
+Mini Zip Contents:
+- ONLY includes: readme.{config}.md or README.{config}.md files
+- Examples: readme.weather.md, readme.hw-all.md, README.all.md
+- These map to: config.weather.yaml, config.hw-all.yaml, config.all.yaml
+- EXCLUDES: Generic README.md files (no config suffix)
 
 The mini zips are used by Streamlit apps to:
 - Download lightweight files from CDF for quick browsing
-- Present users with available installation options
-- Show configuration details before downloading full repositories
+- Present users with available configuration options
+- Show configuration-specific details before downloading full repositories
 - Provide a better UX by avoiding large downloads until needed
 
 Naming Convention:
@@ -22,7 +28,7 @@ Naming Convention:
 
 This makes it easy for Streamlit to:
 1. List all available packages by downloading *-mini.zip files
-2. Parse README files to show configuration options
+2. Parse config-specific README files to show configuration options
 3. Download full {repo-name}.zip only when user selects a configuration
 """
 
@@ -171,7 +177,10 @@ class AppPackageDownloader:
     
     def create_mini_zip(self, full_zip_content: bytes, base_filename: str) -> Optional[bytes]:
         """
-        Create a mini zip containing only README*.md files from the full zip.
+        Create a mini zip containing only config-specific README files from the full zip.
+        Only includes README.{config}.md or readme.{config}.md files that map to config.{config}.yaml.
+        Excludes generic README.md files.
+        
         This mini zip is used by Streamlit to present installation options to users.
         
         Args:
@@ -179,26 +188,41 @@ class AppPackageDownloader:
             base_filename: Base filename for logging
             
         Returns:
-            bytes: Mini zip content, or None if no README files found
+            bytes: Mini zip content, or None if no config README files found
         """
         try:
-            print(f"📝 Creating mini zip with README files...")
+            print(f"📝 Creating mini zip with config-specific README files...")
             
             # Read the full zip
             with zipfile.ZipFile(io.BytesIO(full_zip_content), 'r') as full_zip:
-                # Find all README*.md files (case-insensitive)
-                readme_files = [
-                    name for name in full_zip.namelist() 
-                    if name.lower().endswith('.md') and 'readme' in os.path.basename(name).lower()
-                ]
+                # Find only config-specific README files (README.xyz.md or readme.xyz.md)
+                # Pattern: readme.{something}.md where {something} maps to config.{something}.yaml
+                # Exclude: README.md, readme.md (no suffix after readme)
+                readme_files = []
+                for name in full_zip.namelist():
+                    basename = os.path.basename(name).lower()
+                    # Must end with .md and contain 'readme'
+                    if basename.endswith('.md') and basename.startswith('readme'):
+                        # Check if it has a config suffix (readme.xyz.md, not just readme.md)
+                        # Pattern: readme.{config}.md where config is not empty
+                        parts = basename.split('.')
+                        # Should be: ['readme', 'config-name', 'md'] (3 parts minimum)
+                        if len(parts) >= 3 and parts[0] == 'readme' and parts[-1] == 'md':
+                            # Has a config suffix (e.g., readme.weather.md, readme.hw-all.md)
+                            readme_files.append(name)
+                            print(f"   ✓ Including: {name}")
+                        else:
+                            print(f"   ✗ Excluding: {name} (generic README, no config suffix)")
+                    elif basename == 'readme.md':
+                        print(f"   ✗ Excluding: {name} (generic README.md)")
+                
+                readme_files = sorted(readme_files)
                 
                 if not readme_files:
-                    print(f"⚠️ No README files found in {base_filename}")
+                    print(f"⚠️ No config-specific README files found in {base_filename}")
                     return None
                 
-                print(f"📋 Found {len(readme_files)} README files:")
-                for readme in readme_files:
-                    print(f"   - {readme}")
+                print(f"📋 Found {len(readme_files)} config-specific README files")
                 
                 # Create mini zip in memory
                 mini_zip_buffer = io.BytesIO()
