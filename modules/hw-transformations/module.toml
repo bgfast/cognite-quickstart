@@ -1,0 +1,8 @@
+[module]
+name = "hw-transformations"
+description = "Hello World Transformations - Example transformations for data model operations"
+version = "1.0.0"
+
+[module.metadata]
+author = "Cognite"
+tags = ["hello-world", "transformations", "data-models", "examples"]

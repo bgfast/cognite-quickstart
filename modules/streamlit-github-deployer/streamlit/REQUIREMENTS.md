@@ -515,11 +515,13 @@ The download_packages.py script now creates TWO zip files for each repository:
   - Usage: Downloaded on Step 1 to present installation options
 
 ### 14.3 Mini Zip Contents
-Mini zips contain all README files from the repository:
-- `README.md` - Main repository documentation
-- `README.*.md` - Configuration-specific docs (e.g., `README.all.md`, `README.weather.md`)
-- `readme.*.md` - Alternative case variations
-- Module READMEs - Documentation from subdirectories
+Mini zips contain **ONLY config-specific README files**:
+- **Included**: `README.{config}.md` or `readme.{config}.md` files
+  - Examples: `README.all.md`, `readme.weather.md`, `readme.hw-all.md`, `readme.neat-basic.md`
+  - These map to: `config.all.yaml`, `config.weather.yaml`, `config.hw-all.yaml`, `config.neat-basic.yaml`
+- **Excluded**: Generic `README.md` files (no config suffix)
+- **Excluded**: Module READMEs from subdirectories
+- **Purpose**: Each README describes one specific configuration option for deployment
 
 ### 14.4 Streamlit Workflow with Mini Zips
 

@@ -1,7 +1,7 @@
 externalId: github-repo-deployer
-name: GitHub Repo to CDF Deployer
+name: CDF Package Deployer
 creator: brent.groom@cognitedata.com
-description: "v2.41 - Realistic toolkit-style output showing dynamic resource discovery and deployment"
+description: "v2025.10.06.v1 - Switched to Data Modeling API for file discovery using isUploaded property"
 published: true
 theme: Light
 entrypoint: main.py

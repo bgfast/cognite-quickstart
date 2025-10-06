@@ -1,0 +1,6 @@
+environment:
+  name: hw-transformations
+  project: bgfast
+  validation-type: dev
+  selected:
+    - modules/hw-transformations

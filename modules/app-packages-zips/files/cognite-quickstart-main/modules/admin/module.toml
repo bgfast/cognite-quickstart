@@ -1,6 +1,0 @@
-[module]
-name = "admin"
-description = "Administrative tools including GitHub repository deployment for CDF environment management"
-version = "1.0.0"
-
-[dependencies]

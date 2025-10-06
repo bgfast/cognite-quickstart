@@ -1,6 +1,6 @@
 externalId: hw-neat
 name: Hello World NEAT
 creator: brent.groom@cognitedata.com
-description: "v1.0 - Hello World NEAT data management interface demo"
+description: "v2025.10.05.v1 - Hello World NEAT data management interface demo"
 entrypoint: main.py
 dataSetExternalId: hw-neat-dataset

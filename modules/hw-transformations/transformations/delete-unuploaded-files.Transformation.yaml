@@ -1,0 +1,13 @@
+externalId: delete-unuploaded-files
+name: Delete Unuploaded Files
+dataSetExternalId: hw-transformations-dataset
+destination:
+  type: instances
+  instanceSpace: app-packages
+  dataModel:
+    space: cdf_cdm
+    externalId: CogniteCore
+    version: v1
+    destinationType: nodes
+ignoreNullFields: true
+conflictMode: upsert

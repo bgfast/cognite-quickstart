@@ -1,5 +1,0 @@
-type: rest
-externalId: {{ default_location }}_rest_source
-host: api.open-meteo.com
-scheme: https
-port: 443

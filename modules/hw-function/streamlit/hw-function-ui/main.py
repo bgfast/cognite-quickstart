@@ -8,7 +8,7 @@ import streamlit as st
 import time
 from datetime import datetime
 
-VERSION = "1.1.0"
+VERSION = "2025.10.05.v1"  # Update this when deploying changes
 
 
 @st.cache_resource
@@ -201,7 +201,7 @@ def show_info():
 def main():
     """Main Streamlit app"""
     st.set_page_config(
-        page_title="Hello World Function Demo v1.1",
+        page_title=f"Hello World Function Demo v{VERSION}",
         page_icon="👋",
         layout="wide"
     )
