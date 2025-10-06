@@ -236,34 +236,46 @@ class AppPackageDownloader:
             return None
     
     
-    def filter_pdfs_from_zip(self, zip_content: bytes) -> bytes:
+    def filter_large_files_from_zip(self, zip_content: bytes) -> bytes:
         """
-        Remove all PDF files from a zip file.
+        Remove large non-essential files from a zip file.
+        Filters: PDFs, videos, large images, and other binary files.
         
         Args:
             zip_content: The original zip file content
             
         Returns:
-            bytes: Zip content without PDF files
+            bytes: Zip content without large files
         """
         try:
             original_zip = zipfile.ZipFile(io.BytesIO(zip_content), 'r')
             
-            # Create new zip without PDFs
+            # Define file extensions to exclude
+            excluded_extensions = (
+                '.pdf',      # PDF documents
+                '.mp4', '.mov', '.avi', '.mkv', '.wmv', '.flv', '.webm',  # Videos
+                '.png', '.jpg', '.jpeg', '.gif', '.bmp', '.tiff', '.svg',  # Images
+            )
+            
+            # Create new zip without excluded files
             new_zip_buffer = io.BytesIO()
+            filtered_count = 0
             with zipfile.ZipFile(new_zip_buffer, 'w', zipfile.ZIP_DEFLATED) as new_zip:
                 for item in original_zip.namelist():
-                    # Skip PDF files
-                    if item.lower().endswith('.pdf'):
+                    # Skip files with excluded extensions
+                    if item.lower().endswith(excluded_extensions):
+                        filtered_count += 1
                         continue
                     content = original_zip.read(item)
                     new_zip.writestr(item, content)
             
             original_zip.close()
+            if filtered_count > 0:
+                print(f"   Filtered {filtered_count} file(s)")
             return new_zip_buffer.getvalue()
             
         except Exception as e:
-            print(f"⚠️ Failed to filter PDFs: {e}")
+            print(f"⚠️ Failed to filter files: {e}")
             return zip_content  # Return original if filtering fails
     
     def add_custom_files_to_zip(self, zip_content: bytes, custom_files: Dict[str, str], base_filename: str) -> Optional[bytes]:
@@ -284,13 +296,19 @@ class AppPackageDownloader:
             # Read the original zip
             original_zip = zipfile.ZipFile(io.BytesIO(zip_content), 'r')
             
-            # Create new zip with original content + custom files (excluding PDFs)
+            # Create new zip with original content + custom files (excluding large files)
+            excluded_extensions = (
+                '.pdf',
+                '.mp4', '.mov', '.avi', '.mkv', '.wmv', '.flv', '.webm',
+                '.png', '.jpg', '.jpeg', '.gif', '.bmp', '.tiff', '.svg',
+            )
+            
             new_zip_buffer = io.BytesIO()
             with zipfile.ZipFile(new_zip_buffer, 'w', zipfile.ZIP_DEFLATED) as new_zip:
-                # Copy all original files except PDFs
+                # Copy all original files except large files
                 for item in original_zip.namelist():
-                    # Skip PDF files
-                    if item.lower().endswith('.pdf'):
+                    # Skip excluded files
+                    if item.lower().endswith(excluded_extensions):
                         continue
                     content = original_zip.read(item)
                     new_zip.writestr(item, content)
@@ -356,10 +374,10 @@ class AppPackageDownloader:
             # Download zip file
             zip_content = self.download_zip_file(repo_info["url"], repo_info["name"])
             
-            # Filter out PDF files from the downloaded zip
-            print("🗑️  Filtering out PDF files...")
-            zip_content = self.filter_pdfs_from_zip(zip_content)
-            print("✅ PDF files removed")
+            # Filter out large files (PDFs, videos, images) from the downloaded zip
+            print("🗑️  Filtering out large files (PDFs, videos, images)...")
+            zip_content = self.filter_large_files_from_zip(zip_content)
+            print("✅ Large files removed")
             print()
             
             # Check if this is the cognite-library-pattern-mode-beta repo and add custom files
