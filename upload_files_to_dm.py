@@ -125,18 +125,18 @@ def main():
     
     # Configuration
     instance_space = "app-packages"
-    files_dir = Path("/Users/brent.groom@cognitedata.com/p/cognite-quickstart/modules/app-packages-zips/files")
+    downloads_dir = Path("/Users/brent.groom@cognitedata.com/p/cognite-quickstart/modules/app-packages-zips/downloads")
     
-    # Files to upload (mini zips)
-    files_to_upload = [
-        "cognite-library-pattern-mode-beta-mini.zip",
-        "cognite-quickstart-main-mini.zip",
-        "cognite-samples-main-mini.zip",
-    ]
+    # Find all zip files in the directory
+    files_to_upload = sorted([f.name for f in downloads_dir.glob("*.zip")])
     
     print(f"\nInstance Space: {instance_space}")
-    print(f"Files Directory: {files_dir}")
-    print(f"Files to upload: {len(files_to_upload)}")
+    print(f"Downloads Directory: {downloads_dir}")
+    print(f"📂 Found {len(files_to_upload)} zip files:")
+    for f in files_to_upload:
+        file_size = (downloads_dir / f).stat().st_size
+        print(f"   • {f} ({file_size:,} bytes)")
+    print(f"\nFiles to upload: {len(files_to_upload)}")
     
     # Initialize client
     client = setup_client()
@@ -147,7 +147,7 @@ def main():
     fail_count = 0
     
     for filename in files_to_upload:
-        file_path = files_dir / filename
+        file_path = downloads_dir / filename
         
         if not file_path.exists():
             print(f"❌ File not found: {filename}")

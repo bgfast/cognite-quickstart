@@ -82,27 +82,43 @@ def handle(client, data):
         results["deployment"]["cluster"] = cluster
         
         # ============================================================================
-        # STEP 3: Download zip file from CDF Files
+        # STEP 3: Download zip file from CDF Data Modeling API
         # ============================================================================
         zip_filename = data.get("zip_file", "cognite-quickstart-main.zip")
-        print(f"📥 Downloading {zip_filename} from CDF Files...")
+        print(f"📥 Downloading {zip_filename} from CDF Data Modeling API...")
         
         try:
+            # Query Data Modeling API for CogniteFile instances
+            from cognite.client.data_classes.data_modeling.ids import ViewId, NodeId
+            
+            view_id = ViewId(space="cdf_cdm", external_id="CogniteFile", version="v1")
+            
+            instances = client.data_modeling.instances.list(
+                instance_type="node",
+                sources=view_id,
+                space="app-packages",
+                limit=1000
+            )
+            
             # Find the file by name
-            files = client.files.list(limit=1000)
-            zip_file = None
-            for f in files:
-                if f.name == zip_filename:
-                    zip_file = f
+            zip_instance = None
+            for instance in instances:
+                props = instance.properties.get(view_id, {})
+                name = props.get("name", "")
+                is_uploaded = props.get("isUploaded", False)
+                
+                if name == zip_filename and is_uploaded:
+                    zip_instance = instance
                     break
             
-            if not zip_file:
-                results["error"] = f"Zip file '{zip_filename}' not found in CDF Files"
+            if not zip_instance:
+                results["error"] = f"Zip file '{zip_filename}' not found in app-packages space or not uploaded"
                 results["success"] = False
                 return results
             
-            # Download the file
-            zip_bytes = client.files.download_bytes(id=zip_file.id)
+            # Download the file using instance_id
+            instance_id = NodeId(space=zip_instance.space, external_id=zip_instance.external_id)
+            zip_bytes = client.files.download_bytes(instance_id=instance_id)
             print(f"✅ Downloaded {len(zip_bytes):,} bytes")
             
             results["deployment"]["zip_file"] = zip_filename

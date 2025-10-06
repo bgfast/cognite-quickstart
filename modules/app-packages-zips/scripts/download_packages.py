@@ -50,9 +50,9 @@ class AppPackageDownloader:
     def __init__(self):
         """Initialize the downloader"""
         self.session = requests.Session()
-        self.files_dir = Path(__file__).parent.parent / "files"
+        self.downloads_dir = Path(__file__).parent.parent / "downloads"
         self.config_file = Path(__file__).parent / "repositories.yaml"
-        self.files_dir.mkdir(exist_ok=True)
+        self.downloads_dir.mkdir(exist_ok=True)
         
         # Set up GitHub authentication
         github_token = self.get_github_token()
@@ -236,6 +236,36 @@ class AppPackageDownloader:
             return None
     
     
+    def filter_pdfs_from_zip(self, zip_content: bytes) -> bytes:
+        """
+        Remove all PDF files from a zip file.
+        
+        Args:
+            zip_content: The original zip file content
+            
+        Returns:
+            bytes: Zip content without PDF files
+        """
+        try:
+            original_zip = zipfile.ZipFile(io.BytesIO(zip_content), 'r')
+            
+            # Create new zip without PDFs
+            new_zip_buffer = io.BytesIO()
+            with zipfile.ZipFile(new_zip_buffer, 'w', zipfile.ZIP_DEFLATED) as new_zip:
+                for item in original_zip.namelist():
+                    # Skip PDF files
+                    if item.lower().endswith('.pdf'):
+                        continue
+                    content = original_zip.read(item)
+                    new_zip.writestr(item, content)
+            
+            original_zip.close()
+            return new_zip_buffer.getvalue()
+            
+        except Exception as e:
+            print(f"⚠️ Failed to filter PDFs: {e}")
+            return zip_content  # Return original if filtering fails
+    
     def add_custom_files_to_zip(self, zip_content: bytes, custom_files: Dict[str, str], base_filename: str) -> Optional[bytes]:
         """
         Add custom files to an existing zip file.
@@ -254,11 +284,14 @@ class AppPackageDownloader:
             # Read the original zip
             original_zip = zipfile.ZipFile(io.BytesIO(zip_content), 'r')
             
-            # Create new zip with original content + custom files
+            # Create new zip with original content + custom files (excluding PDFs)
             new_zip_buffer = io.BytesIO()
             with zipfile.ZipFile(new_zip_buffer, 'w', zipfile.ZIP_DEFLATED) as new_zip:
-                # Copy all original files
+                # Copy all original files except PDFs
                 for item in original_zip.namelist():
+                    # Skip PDF files
+                    if item.lower().endswith('.pdf'):
+                        continue
                     content = original_zip.read(item)
                     new_zip.writestr(item, content)
                 
@@ -286,12 +319,12 @@ class AppPackageDownloader:
         """Clean up old zip files - with simple names, we just overwrite existing files"""
         print("🧹 Cleanup: Files will be overwritten if they already exist")
     
-    def save_to_files_dir(self, content: bytes, filename: str) -> bool:
-        """Save zip file to files directory for Cognite Toolkit"""
+    def save_to_downloads_dir(self, content: bytes, filename: str) -> bool:
+        """Save zip file to downloads directory"""
         try:
-            file_path = self.files_dir / filename
+            file_path = self.downloads_dir / filename
             print(f"💾 Saving {filename}...")
-            print(f"📁 Target directory: {self.files_dir}")
+            print(f"📁 Target directory: {self.downloads_dir}")
             print(f"📄 Full path: {file_path}")
             print(f"💽 Writing {len(content):,} bytes to disk...")
             
@@ -323,6 +356,12 @@ class AppPackageDownloader:
             # Download zip file
             zip_content = self.download_zip_file(repo_info["url"], repo_info["name"])
             
+            # Filter out PDF files from the downloaded zip
+            print("🗑️  Filtering out PDF files...")
+            zip_content = self.filter_pdfs_from_zip(zip_content)
+            print("✅ PDF files removed")
+            print()
+            
             # Check if this is the cognite-library-pattern-mode-beta repo and add custom files
             if repo_info['name'] == 'cognite-library-pattern-mode-beta':
                 print()
@@ -349,8 +388,8 @@ class AppPackageDownloader:
             filename = self.generate_filename(repo_info["name"])
             print(f"🏷️ Generated filename: {filename}")
             
-            # Save full zip to files directory
-            success = self.save_to_files_dir(zip_content, filename)
+            # Save full zip to downloads directory
+            success = self.save_to_downloads_dir(zip_content, filename)
             
             if not success:
                 print(f"💥 Failed to save full zip for {repo_info['name']}")
@@ -366,7 +405,7 @@ class AppPackageDownloader:
                 mini_filename = self.generate_mini_filename(repo_info["name"])
                 print(f"🏷️ Generated mini filename: {mini_filename}")
                 
-                mini_success = self.save_to_files_dir(mini_zip_content, mini_filename)
+                mini_success = self.save_to_downloads_dir(mini_zip_content, mini_filename)
                 
                 if mini_success:
                     print(f"✅ Mini zip saved successfully")
@@ -389,16 +428,16 @@ class AppPackageDownloader:
         print("🚀 GitHub Repository Download Process")
         print("=" * 60)
         print(f"📋 Total repositories to process: {len(self.repositories)}")
-        print(f"📁 Target directory: {self.files_dir}")
+        print(f"📁 Target directory: {self.downloads_dir}")
         print(f"📄 Config file: {self.config_file}")
         print()
         
         # Check if target directory exists and is writable
-        if not self.files_dir.exists():
-            print(f"📁 Creating target directory: {self.files_dir}")
-            self.files_dir.mkdir(parents=True, exist_ok=True)
+        if not self.downloads_dir.exists():
+            print(f"📁 Creating target directory: {self.downloads_dir}")
+            self.downloads_dir.mkdir(parents=True, exist_ok=True)
         
-        print(f"✅ Target directory ready: {self.files_dir}")
+        print(f"✅ Target directory ready: {self.downloads_dir}")
         print()
         
         # Run cleanup before downloading new files
@@ -430,8 +469,8 @@ class AppPackageDownloader:
         print(f"📈 Success rate: {(success_count/total_count)*100:.1f}%")
         
         # Show downloaded files
-        full_zip_files = [f for f in self.files_dir.glob("*.zip") if not f.name.endswith("-mini.zip")]
-        mini_zip_files = list(self.files_dir.glob("*-mini.zip"))
+        full_zip_files = [f for f in self.downloads_dir.glob("*.zip") if not f.name.endswith("-mini.zip")]
+        mini_zip_files = list(self.downloads_dir.glob("*-mini.zip"))
         print(f"📁 Files in directory:")
         print(f"   • Full zips: {len(full_zip_files)} files")
         print(f"   • Mini zips (README only): {len(mini_zip_files)} files")

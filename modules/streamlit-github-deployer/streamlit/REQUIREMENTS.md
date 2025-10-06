@@ -759,3 +759,165 @@ The Streamlit app calls a CDF Function to perform the actual deployment. This fu
 - **Cache Clear**: Clear repository cache to force fresh downloads
 - **Environment Reset**: Reload environment variables and restart
 - **Service Restart**: Restart Streamlit service if needed
+
+## 17. Test Harness for Local Development (BACKLOG)
+
+### 17.1 Overview
+Create a local test harness to test key functions without deploying to CDF. This allows rapid development and testing of core functionality before deployment.
+
+### 17.2 Test Harness Requirements
+- **Location**: `tests/local_test_harness.py` (not deployed to SaaS)
+- **Purpose**: Test core functions locally without CDF deployment
+- **Dependencies**: Use the same `core/` modules as production code
+
+### 17.3 Functions to Test Locally
+
+**1. Mini Zip Download and Parsing**
+```python
+def test_download_mini_zips():
+    """Test downloading mini zips from Data Modeling API"""
+    # Query Data Modeling API for CogniteFile instances
+    # Filter for *-mini.zip files with isUploaded: True
+    # Download using instance_id (NodeId)
+    # Verify zip content and structure
+```
+
+**2. Configuration Extraction**
+```python
+def test_extract_configs_from_mini_zip():
+    """Test extracting configuration info from mini zip"""
+    # Load mini zip from local file
+    # Extract readme.*.md files
+    # Parse config names from filenames
+    # Verify config mapping (readme.xyz.md → config.xyz.yaml)
+```
+
+**3. Full Zip Download (Function Code)**
+```python
+def test_download_full_zip_from_dm():
+    """Test CDF Function's ability to download full zip"""
+    # Query Data Modeling API for full zip
+    # Download using instance_id
+    # Extract to temp directory
+    # Verify all files extracted correctly
+```
+
+**4. Toolkit Build Operations**
+```python
+def test_toolkit_build():
+    """Test toolkit build without actual CDF deployment"""
+    # Use local zip file
+    # Extract to temp directory
+    # Run cdf build --env {config} (dry-run mode)
+    # Verify build output and summary
+    # Clean up temp files
+```
+
+**5. Toolkit Deploy Simulation**
+```python
+def test_toolkit_deploy_simulation():
+    """Test toolkit deploy logic without actual deployment"""
+    # Use pre-built directory from test_toolkit_build
+    # Run cdf deploy --env {config} --dry-run
+    # Verify deploy summary
+    # Check resource counts and types
+```
+
+### 17.4 Test Harness Architecture
+```
+tests/
+├── local_test_harness.py       # Main test harness script
+├── test_data/                  # Test fixtures
+│   ├── sample-mini.zip         # Sample mini zip for testing
+│   ├── sample-full.zip         # Sample full zip for testing
+│   └── expected_configs.json   # Expected test results
+├── test_dm_api.py              # Data Modeling API tests
+├── test_zip_operations.py      # Zip file operations tests
+└── test_toolkit_operations.py  # Toolkit build/deploy tests
+```
+
+### 17.5 Test Execution
+```bash
+# Run all local tests
+cd tests/
+python local_test_harness.py --all
+
+# Run specific test categories
+python local_test_harness.py --test mini-zip-download
+python local_test_harness.py --test config-extraction
+python local_test_harness.py --test toolkit-build
+
+# Run with real CDF connection (for DM API tests)
+python local_test_harness.py --test mini-zip-download --use-cdf
+
+# Run in mock mode (no CDF connection required)
+python local_test_harness.py --all --mock
+```
+
+### 17.6 Mock vs Real Testing
+**Mock Mode:**
+- No CDF connection required
+- Uses local test data files
+- Fast execution (< 1 minute)
+- Tests core logic without external dependencies
+
+**Real Mode:**
+- Requires CDF connection and credentials
+- Downloads actual files from CDF Data Modeling API
+- Tests full integration
+- Slower execution (2-5 minutes)
+
+### 17.7 Test Output Format
+```
+========================================
+LOCAL TEST HARNESS
+========================================
+Test Environment: Mock Mode
+CDF Project: N/A (using test data)
+
+✅ test_download_mini_zips          PASSED (0.5s)
+✅ test_extract_configs_from_mini_zip PASSED (0.2s)
+✅ test_download_full_zip_from_dm   PASSED (0.8s)
+✅ test_toolkit_build               PASSED (2.1s)
+✅ test_toolkit_deploy_simulation   PASSED (1.5s)
+
+========================================
+SUMMARY
+========================================
+Total Tests: 5
+Passed: 5
+Failed: 0
+Duration: 5.1s
+Success Rate: 100%
+```
+
+### 17.8 Benefits
+- **Rapid Development**: Test changes without deploying to SaaS
+- **No CDF Quota**: Don't use CDF resources during development
+- **Fast Feedback**: Tests run in seconds, not minutes
+- **Isolation**: Test individual components independently
+- **Confidence**: Verify functionality before deployment
+- **Documentation**: Tests serve as usage examples
+
+### 17.9 Implementation Priority
+**Status**: BACKLOG (Low Priority)
+
+This test harness is valuable for development but not critical for current functionality. Implement when:
+- Team size grows (multiple developers)
+- Deployment frequency increases
+- Need faster development cycles
+- Want to reduce CDF usage during development
+
+### 17.10 Related Components
+- Uses same `core/` modules as production Streamlit app
+- Calls same CDF Function code (handler.py) locally
+- Validates Data Modeling API queries
+- Tests zip file operations
+- Verifies toolkit build/deploy logic
+
+### 17.11 Future Enhancements
+- **CI/CD Integration**: Run tests automatically on commit
+- **Coverage Reports**: Track test coverage metrics
+- **Performance Benchmarks**: Monitor test execution time
+- **Load Testing**: Test with large zip files and many configs
+- **Error Injection**: Test error handling with invalid inputs
