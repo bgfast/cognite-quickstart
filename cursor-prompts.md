@@ -514,13 +514,20 @@ modules/[streamlit-app-name]/
 
 ### Version Management Pattern (3 Required Locations)
 
+**VERSION POLICY**: All Streamlit apps MUST use the format `YYYY.MM.DD.vN` where:
+- `YYYY.MM.DD` is the deployment date
+- `N` is the version number for that day (starts at 1, increments for each deployment)
+- **NEVER increment the major version** (no v2.0, v3.0, etc.)
+- Minor version can go beyond 99 (e.g., v100, v101, etc.)
+- Example progression: `2025.10.05.v1` → `2025.10.05.v2` → `2025.10.06.v1` → `2025.10.06.v2`
+
 #### 1. Streamlit YAML Configuration
 ```yaml
 # [AppName].Streamlit.yaml
 externalId: [app-external-id]        # ← MUST match directory name exactly
 name: [App Display Name]
 creator: [your-email]                # ← REQUIRED field
-description: v[X.XX] - [Brief feature description]  # ← Shows in SaaS Streamlit list
+description: "vYYYY.MM.DD.vN - [Brief feature description]"  # ← Shows in SaaS Streamlit list
 entrypoint: main.py                  # ← Entry point file (required)
 dataSetExternalId: [app-name]-dataset
 
@@ -534,8 +541,11 @@ dataSetExternalId: [app-name]-dataset
 # main.py (MUST be FIRST Streamlit command)
 import streamlit as st
 
+# Define version constant at top of file
+VERSION = "YYYY.MM.DD.vN"  # Update this when deploying changes
+
 st.set_page_config(
-    page_title="[App Name] v[X.XX]",  # ← Browser tab title
+    page_title="[App Name] vYYYY.MM.DD.vN",  # ← Browser tab title
     page_icon="🚀",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -547,7 +557,9 @@ st.set_page_config(
 # main.py (in main UI section)
 st.title("🚀 [App Name]")
 st.markdown("[App description]")
-st.caption("Version [X.XX] - [Brief feature description]")  # ← Visible in app UI
+st.caption(f"Version {VERSION} - [Brief feature description]")  # ← Visible in app UI
+# Or inline:
+st.caption("Version YYYY.MM.DD.vN - [Brief feature description]")
 ```
 
 ### SaaS Compatibility Requirements
@@ -573,15 +585,24 @@ def my_function(client, is_local_env):
 
 ### Version Update Checklist
 ```markdown
-## Streamlit Version Update (v[OLD] → v[NEW])
-□ 1. Update [AppName].Streamlit.yaml description: "v[NEW] - [features]"
-□ 2. Update main.py page_title: "[App Name] v[NEW]"  
-□ 3. Update main.py st.caption: "Version [NEW] - [features]"
-□ 4. TEST LOCALLY FIRST: streamlit run main.py
-□ 5. Build: cdf build --env=[app-config]
-□ 6. Dry-run: cdf deploy --env=[app-config] --dry-run
-□ 7. Deploy: cdf deploy --env=[app-config]
-□ 8. Verify version shows correctly in SaaS Streamlit list
+## Streamlit Version Update (YYYY.MM.DD.vN format)
+
+VERSIONING POLICY:
+- Format: YYYY.MM.DD.vN (e.g., 2025.10.05.v1)
+- YYYY.MM.DD = deployment date
+- N = version number for that day (starts at 1)
+- NEVER increment major version (no v2.0, v3.0)
+- Minor version can exceed 99 (v100, v101, etc.)
+
+□ 1. Update [AppName].Streamlit.yaml description: "vYYYY.MM.DD.vN - [features]"
+□ 2. Update main.py VERSION constant: VERSION = "YYYY.MM.DD.vN"
+□ 3. Update main.py page_title: "[App Name] vYYYY.MM.DD.vN"  
+□ 4. Update main.py st.caption: f"Version {VERSION} - [features]"
+□ 5. TEST LOCALLY FIRST: streamlit run main.py
+□ 6. Build: cdf build --env=[app-config]
+□ 7. Dry-run: cdf deploy --env=[app-config] --dry-run
+□ 8. Deploy: cdf deploy --env=[app-config]
+□ 9. Verify version shows correctly in SaaS Streamlit list
 
 CRITICAL: Always test locally before deploying to catch runtime errors!
 Version bumps are REQUIRED to force CDF to recognize Streamlit changes.

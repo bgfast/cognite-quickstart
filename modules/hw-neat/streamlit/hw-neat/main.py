@@ -6,6 +6,9 @@ This Streamlit app provides an interface for managing data in the Hello World NE
 Users can create, view, and manage Hello World NEAT instances through a user-friendly web interface.
 """
 
+# Version tracking for deployment verification
+VERSION = "2025.10.05.v1"  # Update this when deploying changes
+
 import streamlit as st
 import pandas as pd
 from typing import List, Dict, Any, Optional
@@ -85,14 +88,14 @@ class NeatDataManager:
 def main():
     """Main Streamlit app"""
     st.set_page_config(
-        page_title="Hello World NEAT",
+        page_title=f"Hello World NEAT v{VERSION}",
         page_icon="👋",
         layout="wide"
     )
     
     st.title("👋 Hello World NEAT")
     st.markdown("Create and manage data in your Hello World NEAT data model")
-    st.caption("Version 1.0 - Hello World NEAT data management demo")
+    st.caption(f"Version {VERSION} - Hello World NEAT data management demo")
     
     # Initialize client and view
     client = get_client()

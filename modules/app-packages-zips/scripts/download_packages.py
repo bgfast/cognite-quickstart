@@ -210,11 +210,6 @@ class AppPackageDownloader:
                         if len(parts) >= 3 and parts[0] == 'readme' and parts[-1] == 'md':
                             # Has a config suffix (e.g., readme.weather.md, readme.hw-all.md)
                             readme_files.append(name)
-                            print(f"   ✓ Including: {name}")
-                        else:
-                            print(f"   ✗ Excluding: {name} (generic README, no config suffix)")
-                    elif basename == 'readme.md':
-                        print(f"   ✗ Excluding: {name} (generic README.md)")
                 
                 readme_files = sorted(readme_files)
                 
@@ -240,6 +235,52 @@ class AppPackageDownloader:
             print(f"🔍 Error type: {type(e).__name__}")
             return None
     
+    
+    def add_custom_files_to_zip(self, zip_content: bytes, custom_files: Dict[str, str], base_filename: str) -> Optional[bytes]:
+        """
+        Add custom files to an existing zip file.
+        
+        Args:
+            zip_content: The original zip file content
+            custom_files: Dict mapping destination paths in zip to source file paths on disk
+            base_filename: Base filename for logging
+            
+        Returns:
+            bytes: Updated zip content with custom files added, or None on error
+        """
+        try:
+            print(f"📝 Adding {len(custom_files)} custom file(s) to {base_filename}...")
+            
+            # Read the original zip
+            original_zip = zipfile.ZipFile(io.BytesIO(zip_content), 'r')
+            
+            # Create new zip with original content + custom files
+            new_zip_buffer = io.BytesIO()
+            with zipfile.ZipFile(new_zip_buffer, 'w', zipfile.ZIP_DEFLATED) as new_zip:
+                # Copy all original files
+                for item in original_zip.namelist():
+                    content = original_zip.read(item)
+                    new_zip.writestr(item, content)
+                
+                # Add custom files
+                for dest_path, source_path in custom_files.items():
+                    if os.path.exists(source_path):
+                        with open(source_path, 'rb') as f:
+                            content = f.read()
+                        new_zip.writestr(dest_path, content)
+                        print(f"   ✓ Added: {dest_path} (from {source_path})")
+                    else:
+                        print(f"   ✗ Skipped: {source_path} (file not found)")
+            
+            original_zip.close()
+            new_zip_content = new_zip_buffer.getvalue()
+            print(f"✅ Updated zip created: {len(new_zip_content):,} bytes")
+            return new_zip_content
+            
+        except Exception as e:
+            print(f"❌ Failed to add custom files to {base_filename}: {e}")
+            print(f"🔍 Error type: {type(e).__name__}")
+            return None
     
     def cleanup_old_files(self) -> None:
         """Clean up old zip files - with simple names, we just overwrite existing files"""
@@ -281,6 +322,28 @@ class AppPackageDownloader:
             
             # Download zip file
             zip_content = self.download_zip_file(repo_info["url"], repo_info["name"])
+            
+            # Check if this is the cognite-library-pattern-mode-beta repo and add custom files
+            if repo_info['name'] == 'cognite-library-pattern-mode-beta':
+                print()
+                print("🎯 Detected cognite-library-pattern-mode-beta repository")
+                print("📝 Adding custom cdf_file_annotation files...")
+                
+                # Define custom files to add (both readme and config)
+                script_dir = Path(__file__).parent
+                custom_files = {
+                    'library-added-pattern-mode-beta/readme.cdf_file_annotation.md': str(script_dir / 'readme.cdf_file_annotation.md'),
+                    'library-added-pattern-mode-beta/config.cdf_file_annotation.yaml': str(script_dir / 'config.cdf_file_annotation.yaml')
+                }
+                
+                # Add custom files to the full zip
+                updated_zip_content = self.add_custom_files_to_zip(zip_content, custom_files, repo_info["name"])
+                if updated_zip_content:
+                    zip_content = updated_zip_content
+                    print(f"✅ Custom files added to full zip")
+                else:
+                    print(f"⚠️ Failed to add custom files, continuing with original zip")
+                print()
             
             # Generate filename for full zip
             filename = self.generate_filename(repo_info["name"])

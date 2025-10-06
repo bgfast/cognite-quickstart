@@ -1,0 +1,135 @@
+environment:
+  name: dev
+  project: cdf-jack-prod
+  validation-type: dev
+  selected:
+  # - modules/
+  - modules/contextualization/cdf_file_annotation
+  
+
+variables:
+  modules:
+    dataset: ingestion
+    instanceSpace: springfield_instances
+    rawSourceDatabase: ingestion
+    rawStateDatabase: contextualizationState
+    annotationSpace: springfield_instances
+    assetTransformationExternalId: sap_assets_springfield_s4hana
+    equipmentTransformationExternalId: sap_equipment_springfield_s4hana
+    equipmentToAssetTransformationExternalId: sap_equipment_to_asset_springfield_s4hana
+    timeseriesTransformationExternalId: pi_timeseries_springfield_aveva_pi
+    maintenanceOrderTransformationExternalId: sap_maintenance_orders_springfield_s4hana
+    operationTransformationExternalId: sap_operations_springfield_s4hana
+    operationToMaintenanceOrderTransformationExternalId: sap_operation_to_maintenance_order_springfield_s4hana
+    fileTransformationExternalId: files_metadata_springfield
+    activityToAssetTransformationExternalId: activity_to_asset
+    activityToEquipmentTransformationExternalId: activity_to_equipment
+    activityToTimeSeriesTransformationExternalId: activity_to_timeseries
+    timeSeriesToAssetTransformationExternalId: timeseries_to_asset
+    timeSeriesToEquipmentTransformationExternalId: timeseries_to_equipment
+    organization: gss
+    cdf_common:
+      directRelationJob: ctx_files_direct_relation_write
+      rawStateTable: diagramParsing
+      schemaSpace: cdf_cdm
+
+    cdf_ingestion:
+      workflow: ingestion
+      groupSourceId: <insert>
+      ingestionClientId: ${IDP_CLIENT_ID}
+      ingestionClientSecret: ${IDP_CLIENT_SECRET}
+      pandidContextualizationFunction: contextualization_p_and_id_annotater
+      contextualization_connection_writer: contextualization_connection_writer
+      schemaSpace: sp_enterprise_process_industry
+      schemaSpace2: cdf_cdm
+      schemaSpace3: cdf_idm
+      instanceSpaces:
+      - springfield_instances
+      - cdf_cdm_units
+      runWorkflowUserIds:
+      - <insert>
+
+    contextualization:
+      cdf_file_annotation:
+        # used in /data_sets, /data_models, /functions, /extraction_pipelines, and /workflows
+        annotationDatasetExternalId: ds_file_annotation
+
+        # used in /data_models and /extraction_pipelines
+        annotationStateExternalId: FileAnnotationState
+        annotationStateInstanceSpace: sp_dat_cdf_annotation_states
+        annotationStateSchemaSpace: sp_hdm #NOTE: stands for space helper data model
+        annotationStateVersion: v1.0
+        fileSchemaSpace: sp_enterprise_process_industry
+        fileExternalId: gssFile
+        fileVersion: v1
+
+        # used in /raw and /extraction_pipelines
+        rawDb: db_file_annotation
+        rawTableDocTag: annotation_documents_tags
+        rawTableDocDoc: annotation_documents_docs
+        rawTableDocPattern: annotation_documents_patterns
+        rawTableCache: annotation_entities_cache
+        rawManualPatternsCatalog: manual_patterns_catalog
+
+        # used in /extraction_pipelines
+        extractionPipelineExternalId: ep_file_annotation
+        targetEntitySchemaSpace: sp_enterprise_process_industry
+        targetEntityExternalId: gssAsset
+        targetEntityVersion: v1
+
+        # used in /functions and /workflows
+        launchFunctionExternalId: fn_file_annotation_launch #NOTE: if this is changed, then the folder holding the launch function must be named the same as the new external ID
+        launchFunctionVersion: v1.0.0
+        finalizeFunctionExternalId: fn_file_annotation_finalize #NOTE: if this is changed, then the folder holding the finalize function must be named the same as the new external ID
+        finalizeFunctionVersion: v1.0.0
+        functionClientId: ${IDP_CLIENT_ID}
+        functionClientSecret: ${IDP_CLIENT_SECRET}
+
+        # used in /workflows
+        workflowSchedule: "3-59/10 * * * *" # NOTE: runs every 10 minutes with a 3 minute offset
+        workflowExternalId: wf_file_annotation
+        workflowVersion: v1
+
+        # used in /auth
+        groupSourceId: <insert> # source ID from Azure AD for the corresponding groups
+      
+      cdf_connection_sql:
+        schemaSpace: cdf_cdm
+
+      cdf_p_and_id_parser:
+        contextualizationId: p_and_id_parser
+        contextualizationName: P&ID Parser
+        annotatorJob: ctx_files_pandid_annotater
+        schemaSpace: cdf_cdm
+        instanceSpaces:
+        - springfield_instances
+
+    industrial_tools:
+      cdf_search:
+        location: springfield
+        locationName: Springfield
+
+    models:
+      cdf_process_industry_extension:
+        schemaSpace: sp_enterprise_process_industry
+
+    sourcesystem:
+      cdf_pi:
+        sourceName: Springfield AVEVA PI
+        sourceId: springfield_aveva_pi
+        schemaSpace: sp_enterprise_process_industry
+
+      cdf_sap_assets:
+        sourceName: SAP Springfield S/4HANA Assets
+        sourceId: sap_springfield_s4hana_assets
+        schemaSpace: sp_enterprise_process_industry
+
+      cdf_sap_events:
+        sourceName: SAP Springfield S/4HANA Activities
+        sourceId: sap_springfield_s4hana_activities
+        schemaSpace: sp_enterprise_process_industry
+
+      cdf_sharepoint:
+        sourceName: Springfield Sharepoint
+        sourceId: springfield_sharepoint
+        schemaSpace: sp_enterprise_process_industry

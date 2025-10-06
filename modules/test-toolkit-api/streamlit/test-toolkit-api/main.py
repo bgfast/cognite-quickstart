@@ -5,7 +5,7 @@ Tests if the toolkit library API works in SaaS environment
 """
 
 # Version tracking for deployment verification
-VERSION = "2025.01.03.v31"  # Update this when deploying changes
+VERSION = "2025.10.05.v1"  # Update this when deploying changes
 
 import streamlit as st
 import sys
