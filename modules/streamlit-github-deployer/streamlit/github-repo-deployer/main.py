@@ -372,6 +372,12 @@ def call_deploy_function(client: CogniteClient, config: Dict):
         "config_name": config['config']
     }
     
+    # Add environment variables if uploaded
+    env_vars = st.session_state.get('env_vars', {})
+    if env_vars:
+        function_data["env_vars"] = env_vars
+        st.info(f"📋 Including {len(env_vars)} environment variables in function call")
+    
     st.info(f"""
 **Calling Function**: `{function_name}`
 - **Package**: `{config['package']}`
@@ -673,6 +679,31 @@ def main():
         if selected_label:
             selected_config = config_map[selected_label]
             st.session_state['selected_config'] = selected_config
+            
+            # Environment file upload
+            st.subheader("🔐 Environment Configuration (Optional)")
+            uploaded_env_file = st.file_uploader(
+                "Upload .env file (optional - for IDP credentials)",
+                type=None,
+                help="Upload a .env file with IDP_CLIENT_ID, IDP_CLIENT_SECRET, IDP_TENANT_ID for hosted extractors"
+            )
+            
+            env_vars_dict = {}
+            if uploaded_env_file is not None:
+                env_content = str(uploaded_env_file.read(), "utf-8")
+                st.success(f"✅ Loaded {uploaded_env_file.name}")
+                
+                # Parse .env file into dict
+                for line in env_content.split('\n'):
+                    line = line.strip()
+                    if line and not line.startswith('#') and '=' in line:
+                        key, value = line.split('=', 1)
+                        env_vars_dict[key.strip()] = value.strip()
+                
+                st.info(f"📋 Parsed {len(env_vars_dict)} environment variables")
+            
+            # Store env_vars in session state for function call
+            st.session_state['env_vars'] = env_vars_dict
             
             # Deploy button directly below dropdown
             if st.button("🚀 Deploy Configuration", type="primary", use_container_width=True):
