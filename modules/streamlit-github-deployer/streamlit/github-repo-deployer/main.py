@@ -1,7 +1,7 @@
 import streamlit as st
 
 # Version tracking
-VERSION = "2025.10.06.v1"
+VERSION = "2025.10.16.v1"
 
 # Set page config FIRST
 st.set_page_config(
@@ -126,15 +126,10 @@ def download_all_mini_zips(client: CogniteClient) -> List[Dict]:
                 return []
             
             all_configs = []
-            progress_bar = st.progress(0)
-            status_text = st.empty()
-            
-            total = len(mini_zips)
             
             for idx, mz in enumerate(mini_zips):
                 file_name = mz['name']
-                status_text.text(f"📦 Processing {idx+1}/{total}: {file_name}")
-                progress_bar.progress((idx + 1) / total)
+                st.write(f"📦 Processing {idx+1}/{len(mini_zips)}: {file_name}")
                 
                 try:
                     # Download using instance_id (NodeId)
@@ -152,9 +147,6 @@ def download_all_mini_zips(client: CogniteClient) -> List[Dict]:
                 except Exception as e:
                     st.error(f"  ❌ Failed to process {file_name}: {e}")
                     st.code(traceback.format_exc())
-            
-            progress_bar.empty()
-            status_text.empty()
             
             return all_configs
     except Exception as e:
@@ -248,7 +240,6 @@ def call_deploy_function(client: CogniteClient, config: Dict):
         
         logs_container = st.container()
         status_placeholder = st.empty()
-        progress_bar = st.progress(0)
         
         all_logs = []
         last_log_timestamp = None
@@ -259,10 +250,6 @@ def call_deploy_function(client: CogniteClient, config: Dict):
         while elapsed < max_wait:
             time.sleep(poll_interval)
             elapsed += poll_interval
-            
-            # Update progress
-            progress = min(elapsed / max_wait, 0.95)
-            progress_bar.progress(progress)
             
             # Get function status
             call_status = client.functions.calls.retrieve(
@@ -321,7 +308,6 @@ def call_deploy_function(client: CogniteClient, config: Dict):
             
             # Check if completed
             if call_status.status == "Completed":
-                progress_bar.progress(1.0)
                 status_placeholder.text("✅ Function completed!")
                 
                 # Get final logs
