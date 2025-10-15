@@ -123,6 +123,17 @@ def main():
     print("UPLOADING ZIP FILES TO CDF FILES API")
     print("=" * 80)
     
+    # Show deployment destination
+    cdf_project = os.getenv("CDF_PROJECT", "NOT SET")
+    cdf_cluster = os.getenv("CDF_CLUSTER", "NOT SET")
+    cdf_url = os.getenv("CDF_URL", "NOT SET")
+    
+    print(f"🎯 DEPLOYMENT DESTINATION:")
+    print(f"   Project: {cdf_project}")
+    print(f"   Cluster: {cdf_cluster}")
+    print(f"   URL: {cdf_url}")
+    print()
+    
     # Configuration
     instance_space = "app-packages"
     downloads_dir = Path("/Users/brent.groom@cognitedata.com/p/cognite-quickstart/modules/app-packages-zips/downloads")
