@@ -1,7 +1,7 @@
 import streamlit as st
 
 # Version tracking
-VERSION = "2025.10.16.v1"
+VERSION = "2025.10.16.v2"
 
 # Set page config FIRST
 st.set_page_config(
@@ -47,21 +47,21 @@ def get_cdf_client() -> Optional[CogniteClient]:
     try:
         return CogniteClient()
     except:
-        try:
-            from cognite.client import ClientConfig
-            from cognite.client.credentials import OAuthClientCredentials
-            
-            config = ClientConfig(
+    try:
+        from cognite.client import ClientConfig
+        from cognite.client.credentials import OAuthClientCredentials
+        
+        config = ClientConfig(
                 client_name="cdf-package-deployer",
-                base_url=f"https://{os.environ['CDF_CLUSTER']}.cognitedata.com",
-                project=os.environ['CDF_PROJECT'],
-                credentials=OAuthClientCredentials(
-                    token_url=os.environ['IDP_TOKEN_URL'],
-                    client_id=os.environ['IDP_CLIENT_ID'],
-                    client_secret=os.environ['IDP_CLIENT_SECRET'],
-                    scopes=[f"https://{os.environ['CDF_CLUSTER']}.cognitedata.com/.default"]
-                )
+            base_url=f"https://{os.environ['CDF_CLUSTER']}.cognitedata.com",
+            project=os.environ['CDF_PROJECT'],
+            credentials=OAuthClientCredentials(
+                token_url=os.environ['IDP_TOKEN_URL'],
+                client_id=os.environ['IDP_CLIENT_ID'],
+                client_secret=os.environ['IDP_CLIENT_SECRET'],
+                scopes=[f"https://{os.environ['CDF_CLUSTER']}.cognitedata.com/.default"]
             )
+        )
             return CogniteClient(config)
         except:
             return None
@@ -107,12 +107,7 @@ def download_all_mini_zips(client: CogniteClient) -> List[Dict]:
                         "space": instance.space
                     })
             
-            st.info(f"🔍 Found {len(mini_zips)} mini zip files in CDF")
-            
-            # Debug: Show all found mini zips
-            with st.expander("🔍 Debug: Mini zip files found", expanded=True):
-                for mz in mini_zips:
-                    st.text(f"  • {mz['name']} (space: {mz['space']}, externalId: {mz['external_id']})")
+            st.success(f"✅ Found {len(mini_zips)} mini zip files in CDF")
             
             if not mini_zips:
                 st.warning("⚠️ No mini zips found in app-packages space")
@@ -127,26 +122,28 @@ def download_all_mini_zips(client: CogniteClient) -> List[Dict]:
             
             all_configs = []
             
-            for idx, mz in enumerate(mini_zips):
-                file_name = mz['name']
-                st.write(f"📦 Processing {idx+1}/{len(mini_zips)}: {file_name}")
-                
-                try:
-                    # Download using instance_id (NodeId)
-                    from cognite.client.data_classes.data_modeling.ids import NodeId
-                    instance_id = NodeId(space=mz['space'], external_id=mz['external_id'])
+            # Hide processing details in collapsed expander
+            with st.expander("🔍 Debug: Download and processing details", expanded=False):
+                for idx, mz in enumerate(mini_zips):
+                    file_name = mz['name']
+                    st.write(f"📦 Processing {idx+1}/{len(mini_zips)}: {file_name}")
                     
-                    st.write(f"  📥 Downloading {file_name} (instance: {mz['space']}/{mz['external_id']})...")
-                    content = client.files.download_bytes(instance_id=instance_id)
-                    st.write(f"  ✅ Downloaded {len(content)} bytes")
-                    
-                    st.write(f"  🔍 Extracting configs from {file_name}...")
-                    configs = extract_configs_from_mini_zip(content, file_name)
-                    all_configs.extend(configs)
-                    st.write(f"  ✅ {file_name}: Found {len(configs)} configurations")
-                except Exception as e:
-                    st.error(f"  ❌ Failed to process {file_name}: {e}")
-                    st.code(traceback.format_exc())
+                    try:
+                        # Download using instance_id (NodeId)
+                        from cognite.client.data_classes.data_modeling.ids import NodeId
+                        instance_id = NodeId(space=mz['space'], external_id=mz['external_id'])
+                        
+                        st.write(f"  📥 Downloading {file_name} (instance: {mz['space']}/{mz['external_id']})...")
+                        content = client.files.download_bytes(instance_id=instance_id)
+                        st.write(f"  ✅ Downloaded {len(content)} bytes")
+                        
+                        st.write(f"  🔍 Extracting configs from {file_name}...")
+                        configs = extract_configs_from_mini_zip(content, file_name)
+                        all_configs.extend(configs)
+                        st.write(f"  ✅ {file_name}: Found {len(configs)} configurations")
+                    except Exception as e:
+                        st.error(f"  ❌ Failed to process {file_name}: {e}")
+                        st.code(traceback.format_exc())
             
             return all_configs
     except Exception as e:
@@ -485,7 +482,7 @@ def main():
         
         if configs:
             st.success(f"✅ Loaded {len(configs)} configurations from {len(set(c['package'] for c in configs))} packages")
-        else:
+                else:
             st.error("❌ No configurations found. Please check that mini zips are uploaded to CDF.")
             st.stop()
     
@@ -513,6 +510,10 @@ def main():
             selected_config = config_map[selected_label]
             st.session_state['selected_config'] = selected_config
             
+            # Display README directly below dropdown
+            with st.expander(f"📖 README: {selected_config['config']}", expanded=False):
+                st.markdown(selected_config['readme_content'])
+            
             # Environment file upload
             st.subheader("🔐 Environment Configuration (Optional)")
             uploaded_env_file = st.file_uploader(
@@ -538,27 +539,19 @@ def main():
             # Store env_vars in session state for function call
             st.session_state['env_vars'] = env_vars_dict
             
-            # Deploy button directly below dropdown
+            # Deploy button
             if st.button("🚀 Deploy Configuration", type="primary", use_container_width=True):
                 call_deploy_function(client, selected_config)
             
-            st.divider()
-            
-            # Configuration details below
-            st.subheader("📋 Configuration Details")
-            
-            col1, col2 = st.columns(2)
-            with col1:
-                st.metric("📦 Package", selected_config['package'])
-                st.metric("⚙️ Configuration", selected_config['config'])
-            with col2:
-                st.metric("📦 Full Zip", selected_config['full_zip'])
-                st.metric("📄 Config File", selected_config['config_file'])
-            
-            # Display README
-            st.subheader(f"📖 README: {selected_config['config']}")
-            with st.expander("View README Content", expanded=False):
-                st.markdown(selected_config['readme_content'])
+            # Configuration details collapsed
+            with st.expander("📋 Configuration Details", expanded=False):
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.metric("📦 Package", selected_config['package'])
+                    st.metric("⚙️ Configuration", selected_config['config'])
+                with col2:
+                    st.metric("📦 Full Zip", selected_config['full_zip'])
+                    st.metric("📄 Config File", selected_config['config_file'])
     else:
         st.error("❌ No configurations available")
 

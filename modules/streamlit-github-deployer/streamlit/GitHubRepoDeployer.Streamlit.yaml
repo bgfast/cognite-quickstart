@@ -1,7 +1,7 @@
 externalId: github-repo-deployer
 name: CDF Package Deployer
 creator: brent.groom@cognitedata.com
-description: "v2025.10.16.v1 - Removed progress bar code that never worked properly"
+description: "v2025.10.16.v2 - Cleaned up UI: collapsed debug output, reorganized layout"
 published: true
 theme: Light
 entrypoint: main.py
