@@ -1,7 +1,7 @@
 import streamlit as st
 
 # Version tracking
-VERSION = "2025.10.16.v4"
+VERSION = "2025.10.16.v6"
 
 # Set page config FIRST
 st.set_page_config(
@@ -44,27 +44,7 @@ if 'selected_config' not in st.session_state:
 @st.cache_resource
 def get_cdf_client() -> Optional[CogniteClient]:
     """Initialize and cache CogniteClient"""
-    try:
-        return CogniteClient()
-    except:
-    try:
-        from cognite.client import ClientConfig
-        from cognite.client.credentials import OAuthClientCredentials
-        
-        config = ClientConfig(
-                client_name="cdf-package-deployer",
-            base_url=f"https://{os.environ['CDF_CLUSTER']}.cognitedata.com",
-            project=os.environ['CDF_PROJECT'],
-            credentials=OAuthClientCredentials(
-                token_url=os.environ['IDP_TOKEN_URL'],
-                client_id=os.environ['IDP_CLIENT_ID'],
-                client_secret=os.environ['IDP_CLIENT_SECRET'],
-                scopes=[f"https://{os.environ['CDF_CLUSTER']}.cognitedata.com/.default"]
-            )
-        )
-            return CogniteClient(config)
-        except:
-            return None
+    return CogniteClient()
 
 # --- Mini Zip Functions ---
 def download_all_mini_zips(client: CogniteClient) -> List[Dict]:
@@ -462,7 +442,7 @@ def main():
                 st.caption(f"Cluster: {client.config.base_url}")
             except:
                 st.warning("⚠️ Connection info unavailable")
-        else:
+                else:
             st.error("❌ Not connected to CDF")
             st.stop()
         
@@ -480,9 +460,7 @@ def main():
         st.session_state['all_configs'] = configs
         st.session_state['mini_zips_loaded'] = True
         
-        if configs:
-            st.success(f"✅ Loaded {len(configs)} configurations from {len(set(c['package'] for c in configs))} packages")
-                else:
+        if not configs:
             st.error("❌ No configurations found. Please check that mini zips are uploaded to CDF.")
             st.stop()
     
@@ -552,6 +530,16 @@ def main():
                 with col2:
                     st.metric("📦 Full Zip", selected_config['full_zip'])
                     st.metric("📄 Config File", selected_config['config_file'])
+        
+        # Debug section at bottom of page
+        with st.expander("🔍 Debug: Download and processing details", expanded=False):
+            st.success(f"✅ Loaded {len(st.session_state['all_configs'])} configurations from {len(set(c['package'] for c in st.session_state['all_configs']))} packages")
+            st.write("Found the following packages:")
+            for package in sorted(set(c['package'] for c in st.session_state['all_configs'])):
+                configs_in_package = [c['config'] for c in st.session_state['all_configs'] if c['package'] == package]
+                st.write(f"  • **{package}**: {len(configs_in_package)} configuration(s)")
+                for cfg in configs_in_package:
+                    st.write(f"    - {cfg}")
     else:
         st.error("❌ No configurations available")
 

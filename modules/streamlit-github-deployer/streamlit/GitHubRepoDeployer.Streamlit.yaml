@@ -1,7 +1,7 @@
 externalId: github-repo-deployer
 name: CDF Package Deployer
 creator: brent.groom@cognitedata.com
-description: "v2025.10.16.v4 - Fixed else clause indentation error (syntax verified)"
+description: "v2025.10.16.v6 - Moved success message into debug dropdown at bottom of page"
 published: true
 theme: Light
 entrypoint: main.py
