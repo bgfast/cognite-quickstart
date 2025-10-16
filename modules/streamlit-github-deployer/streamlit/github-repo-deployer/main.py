@@ -1,7 +1,7 @@
 import streamlit as st
 
 # Version tracking
-VERSION = "2025.10.16.v2"
+VERSION = "2025.10.16.v3"
 
 # Set page config FIRST
 st.set_page_config(
@@ -47,21 +47,21 @@ def get_cdf_client() -> Optional[CogniteClient]:
     try:
         return CogniteClient()
     except:
-    try:
-        from cognite.client import ClientConfig
-        from cognite.client.credentials import OAuthClientCredentials
-        
-        config = ClientConfig(
+        try:
+            from cognite.client import ClientConfig
+            from cognite.client.credentials import OAuthClientCredentials
+            
+            config = ClientConfig(
                 client_name="cdf-package-deployer",
-            base_url=f"https://{os.environ['CDF_CLUSTER']}.cognitedata.com",
-            project=os.environ['CDF_PROJECT'],
-            credentials=OAuthClientCredentials(
-                token_url=os.environ['IDP_TOKEN_URL'],
-                client_id=os.environ['IDP_CLIENT_ID'],
-                client_secret=os.environ['IDP_CLIENT_SECRET'],
-                scopes=[f"https://{os.environ['CDF_CLUSTER']}.cognitedata.com/.default"]
+                base_url=f"https://{os.environ['CDF_CLUSTER']}.cognitedata.com",
+                project=os.environ['CDF_PROJECT'],
+                credentials=OAuthClientCredentials(
+                    token_url=os.environ['IDP_TOKEN_URL'],
+                    client_id=os.environ['IDP_CLIENT_ID'],
+                    client_secret=os.environ['IDP_CLIENT_SECRET'],
+                    scopes=[f"https://{os.environ['CDF_CLUSTER']}.cognitedata.com/.default"]
+                )
             )
-        )
             return CogniteClient(config)
         except:
             return None
