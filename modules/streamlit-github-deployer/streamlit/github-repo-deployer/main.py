@@ -1,7 +1,7 @@
 import streamlit as st
 
 # Version tracking
-VERSION = "2025.10.16.v7"
+VERSION = "2025.10.16.v8"
 
 # Set page config FIRST
 st.set_page_config(
@@ -480,7 +480,8 @@ def main():
             st.session_state['selected_config'] = selected_config
             
             # Display README directly below dropdown
-            with st.expander(f"📖 README: {selected_config['config']}", expanded=False):
+            st.subheader(f"📖 README: {selected_config['config']}")
+            with st.expander("View README Content", expanded=False):
                 st.markdown(selected_config['readme_content'])
             
             # Environment file upload
