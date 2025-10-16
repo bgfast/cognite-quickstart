@@ -1,7 +1,7 @@
 externalId: github-repo-deployer
 name: CDF Package Deployer
 creator: brent.groom@cognitedata.com
-description: "v2025.10.16.v6 - Moved success message into debug dropdown at bottom of page"
+description: "v2025.10.16.v7 - Removed debug dropdown from download phase, only shows at bottom"
 published: true
 theme: Light
 entrypoint: main.py

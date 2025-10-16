@@ -1,7 +1,7 @@
 import streamlit as st
 
 # Version tracking
-VERSION = "2025.10.16.v6"
+VERSION = "2025.10.16.v7"
 
 # Set page config FIRST
 st.set_page_config(
@@ -87,7 +87,7 @@ def download_all_mini_zips(client: CogniteClient) -> List[Dict]:
                         "space": instance.space
                     })
             
-            st.success(f"✅ Found {len(mini_zips)} mini zip files in CDF")
+            #st.success(f"✅ Found {len(mini_zips)} mini zip files in CDF")
             
             if not mini_zips:
                 st.warning("⚠️ No mini zips found in app-packages space")
@@ -102,28 +102,21 @@ def download_all_mini_zips(client: CogniteClient) -> List[Dict]:
             
             all_configs = []
             
-            # Hide processing details in collapsed expander
-            with st.expander("🔍 Debug: Download and processing details", expanded=False):
-                for idx, mz in enumerate(mini_zips):
-                    file_name = mz['name']
-                    st.write(f"📦 Processing {idx+1}/{len(mini_zips)}: {file_name}")
+            # Process mini zips silently (debug info shown at bottom of page)
+            for idx, mz in enumerate(mini_zips):
+                file_name = mz['name']
+                
+                try:
+                    # Download using instance_id (NodeId)
+                    from cognite.client.data_classes.data_modeling.ids import NodeId
+                    instance_id = NodeId(space=mz['space'], external_id=mz['external_id'])
                     
-                    try:
-                        # Download using instance_id (NodeId)
-                        from cognite.client.data_classes.data_modeling.ids import NodeId
-                        instance_id = NodeId(space=mz['space'], external_id=mz['external_id'])
-                        
-                        st.write(f"  📥 Downloading {file_name} (instance: {mz['space']}/{mz['external_id']})...")
-                        content = client.files.download_bytes(instance_id=instance_id)
-                        st.write(f"  ✅ Downloaded {len(content)} bytes")
-                        
-                        st.write(f"  🔍 Extracting configs from {file_name}...")
-                        configs = extract_configs_from_mini_zip(content, file_name)
-                        all_configs.extend(configs)
-                        st.write(f"  ✅ {file_name}: Found {len(configs)} configurations")
-                    except Exception as e:
-                        st.error(f"  ❌ Failed to process {file_name}: {e}")
-                        st.code(traceback.format_exc())
+                    content = client.files.download_bytes(instance_id=instance_id)
+                    configs = extract_configs_from_mini_zip(content, file_name)
+                    all_configs.extend(configs)
+                except Exception as e:
+                    st.error(f"  ❌ Failed to process {file_name}: {e}")
+                    st.code(traceback.format_exc())
             
             return all_configs
     except Exception as e:
@@ -427,8 +420,6 @@ def call_deploy_function(client: CogniteClient, config: Dict):
 # --- Main Application ---
 def main():
     st.title("📦 CDF Package Deployer")
-    st.markdown("**Mini Zip Workflow** - Browse and deploy configurations from CDF")
-    st.caption(f"Version {VERSION} - Automatic mini zip download and configuration selection")
     
     # Initialize CDF client
     client = get_cdf_client()
@@ -442,7 +433,7 @@ def main():
                 st.caption(f"Cluster: {client.config.base_url}")
             except:
                 st.warning("⚠️ Connection info unavailable")
-                else:
+        else:
             st.error("❌ Not connected to CDF")
             st.stop()
         
@@ -493,9 +484,9 @@ def main():
                 st.markdown(selected_config['readme_content'])
             
             # Environment file upload
-            st.subheader("🔐 Environment Configuration (Optional)")
+            st.subheader("🔐 Environment Configuration")
             uploaded_env_file = st.file_uploader(
-                "Upload .env file (optional - for IDP credentials)",
+                "Upload .env file (for IDP credentials)",
                 type=None,
                 help="Upload a .env file with IDP_CLIENT_ID, IDP_CLIENT_SECRET, IDP_TENANT_ID for hosted extractors"
             )
