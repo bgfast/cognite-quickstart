@@ -20,6 +20,9 @@ environment:
   ### Hello World NEAT Data Model
   - modules/hw-neat                          ### Excel-based data modeling with NEAT
 
+  ### Hello World Time Series Streamlit
+  - modules/hw-timeseries-streamlit          ### Streamlit reading CDF time series (edr_training_*)
+
 variables:
   # Hello World Function Configuration
   hw_function_space: hw-function             # Name of the hello world function space

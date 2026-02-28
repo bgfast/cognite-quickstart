@@ -1,9 +1,0 @@
-[module]
-title = "App Packages Data Model"
-
-[packages]
-tags = [
-    "app-packages",
-    "data-model",
-    "admin",
-]

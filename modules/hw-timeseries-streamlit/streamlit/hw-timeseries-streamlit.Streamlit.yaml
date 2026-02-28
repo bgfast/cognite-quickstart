@@ -1,0 +1,6 @@
+externalId: hw-timeseries-streamlit
+name: HW Time Series Streamlit
+creator: brent.groom@cognitedata.com
+description: "v2025.02.26.v1 - Streamlit reading CDF time series (edr_training_*)"
+entrypoint: main.py
+dataSetExternalId: hw-timeseries-streamlit-dataset
