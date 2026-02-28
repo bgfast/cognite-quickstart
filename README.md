@@ -1,16 +1,20 @@
 # Cognite Quickstart Project
 
-This project is set up with the Live Weather Data module from the Cognite samples repository.
+This project is a Hello World–style quickstart for Cognite Data Fusion (CDF), with modules for Functions, NEAT data modeling, and Streamlit apps.
 
 ## Overview
 
-This project includes:
-- **Live Weather Data Module**: A comprehensive data integration module that collects real-time temperature data from the Valhall oil platform using hosted REST extractors
-- **Foundation Module**: Basic CDF setup and access management
-- **Valhall Data Model**: Core data model for industrial assets
-- **Offshore Oil & Gas Industry Model**: Industry-specific data model
-- **Analytics & Monitoring**: Operations summarizer, pipeline monitor, and super emitter
-- **Streamlit Applications**: Time series annotation, work package generator, and hardware canvas
+On **main**, the primary setup is the **Hello World demo set**, which includes:
+
+- **hw-function** — Cognite Function + Streamlit integration (call a function from a Streamlit app)
+- **hw-neat** — Excel-based data modeling with NEAT and a Streamlit app for CRUD
+- **hw-timeseries-streamlit** — Streamlit app that reads CDF time series (e.g. `edr_training_*`)
+
+Additional modules used by these or other configs:
+
+- **hw-transformations** — Transformations (e.g. cleanup); deploy with its own env
+- **common/foundation** — Base CDF setup and access
+- **common/valhall_dm** — Data model used by some configs
 
 ## Setup Instructions
 
@@ -24,221 +28,99 @@ This project includes:
 2. **Or copy the template and customize**:
    ```bash
    cp cdfenv.sh cdfenv.local.sh
-   # Edit cdfenv.local.sh with your actual CDF project details
+   # Edit cdfenv.local.sh with your CDF project details
    source cdfenv.local.sh
    ```
 
-   Required environment variables:
-   - `CDF_PROJECT`: Your CDF project name
-   - `CDF_CLUSTER`: Your CDF cluster
-   - `IDP_CLIENT_ID` and `IDP_CLIENT_SECRET`: Your IDP credentials
-   - Other required environment variables
+   Required environment variables (see `config.all-hw.yaml` for the full list):
 
-### 2. Deploy the Project
+   - `CDF_PROJECT`, `CDF_CLUSTER`
+   - `IDP_CLIENT_ID`, `IDP_CLIENT_SECRET`, `IDP_*`
+   - `FUNCTION_CLIENT_ID`, `FUNCTION_CLIENT_SECRET`
+   - `TRANSFORMATION_CLIENT_ID`, `TRANSFORMATION_CLIENT_SECRET`
+   - `SUPERUSER_SOURCEID_ENV`, `USER_IDENTIFIER`
 
-1. **Build the project**:
-   ```bash
-   cdf build
-   ```
+### 2. Deploy the Hello World Set
 
-2. **Deploy to CDF**:
-   ```bash
-   cdf deploy
-   ```
+Use the **`all-hw`** environment (uses `config.all-hw.yaml`). Always use the **`--env`** flag, not `--config`:
+
+```bash
+cdf build --env=all-hw
+cdf deploy --env=all-hw --dry-run   # optional: preview
+cdf deploy --env=all-hw
+```
 
 ### 3. Verify Deployment
 
-After deployment, you can verify the components in the CDF UI:
+After deployment, check in the CDF UI:
 
-#### A) Extraction Pipeline (Hosted Connector)
-1. Navigate to **Data Integration** → **Extraction pipelines** → **Hosted extractors** tab
-2. Look for `valhall_rest_source` (visible in the list with throughput: 1223 datapoints p/hr)
-3. Click on `valhall_rest_source` to see job details and configuration
-4. Verify: Status shows "Connected" and "Currently running" with 100.00% uptime
+- **Functions** — Your function space (e.g. `hw-function`) and the Hello World function
+- **Streamlit apps** — Hello World Function app, NEAT app, and Time Series Streamlit app
+- **Data model (NEAT)** — Space and containers/views from `hw-neat` (e.g. `HWNeatBasic`)
 
-#### B) Data Workflow
-1. Navigate to **Data Integration** → **Data workflows**
-2. Look for `wf_live_weather_data_valhall` (description: "Live weather data transformation for valhall")
-3. Click on the workflow to see execution history and status
-4. Verify: Workflow is processing data after hosted extractor completes
+For time series–based demos (e.g. `hw-timeseries-streamlit`), ensure time series exist. You can populate training time series with:
 
-#### C) Data Explorer
-1. Navigate to **Data Explorer** → **Time series** tab
-2. Search for `valhall_temperature`
-3. Verify: Time series exists with temperature data
+```bash
+python scripts/populate_edr_timeseries.py
+```
 
-#### D) Main Search UI
-1. Navigate to **Search** (main search interface)
-2. Search for `valhall`
-3. Filter by **Time series** (should show 1 result)
-4. Results: `valhall_temperature` with description "valhall temperature", source unit "degC", and preview chart
+(Requires a suitable environment and CDF credentials.)
 
 ## Project Structure
 
 ```
 cognite-quickstart/
-├── config.all.yaml                    # Main configuration file
-├── cdfenv.sh                         # Environment variables template
-├── README.md                         # This file
+├── config.all-hw.yaml              # Main Hello World config (hw-function, hw-neat, hw-timeseries-streamlit)
+├── config.hw-function.yaml         # hw-function only
+├── config.hw-neat.yaml             # hw-neat only
+├── config.hw-transformations.yaml  # hw-transformations only
+├── config.neat-basic.yaml          # NEAT basic demo
+├── config.weather.yaml             # Weather/Valhall demo (see README.weather.md)
+├── cdfenv.sh                       # Environment template
+├── README.md                       # This file
+├── readme.hw-all.md                # Hello World set (all-hw) details
+├── readme.hw-function.md          # hw-function details
+├── readme.hw-neat.md               # hw-neat details
+├── readme.hw-transformations.md    # hw-transformations details
+├── readme.neat-basic.md            # NEAT basic demo
+├── README.weather.md               # Weather/Valhall setup
+├── scripts/                        # Utility scripts
+│   ├── check_syntax.py
+│   ├── quick_check_mini_zips.py
+│   ├── populate_edr_timeseries.py  # Populate edr_training_* time series
+│   ├── test_dm_file_download.py
+│   ├── list_app_packages_instances.py
+│   └── delete_all_app_packages_instances.py
 └── modules/
-    ├── admin/
-    │   ├── module.toml              # Admin module configuration
-    │   ├── README.md               # Admin module documentation
-    │   └── github-repo-deployer/   # GitHub Repo to CDF Deployer
-    │       ├── module.toml         # Deployer module configuration
-    │       ├── README.md          # Deployer documentation
-    │       └── streamlit/         # Streamlit application
-    │           ├── GitHubRepoDeployer.Streamlit.yaml
-    │           └── github-repo-deployer/
-    │               ├── main.py
-    │               ├── requirements.txt
-    │               └── run.sh
-    ├── common/
-    │   ├── foundation/               # Foundation module
-    │   └── valhall_dm/              # Valhall data model
-    └── in-development/
-        └── live_weather_data/        # Live weather data module
-            ├── hosted_extractors/    # REST extractor configuration
-            ├── transformations/      # Data transformation logic
-            ├── workflows/           # Workflow definitions
-            └── README.md           # Module documentation
+    ├── hw-function/                # Hello World function + Streamlit
+    ├── hw-neat/                    # Hello World NEAT data model + Streamlit
+    ├── hw-timeseries-streamlit/    # Streamlit app for time series
+    ├── hw-transformations/         # Transformations (separate env)
+    └── common/
+        ├── foundation/
+        └── valhall_dm/
 ```
 
-## Key Features
+## Other Configurations
 
-### Live Weather Data Module
-- **Real-time Data Collection**: Hourly temperature data from Valhall oil platform
-- **REST API Integration**: Uses Open-Meteo API for weather data
-- **Data Processing**: Transforms raw API data into structured time series
-- **Asset Association**: Links temperature data to platform assets
-- **Historical Data**: Collects 90 days of historical data
+- **Single modules**: `cdf build --env=hw-function`, `cdf build --env=hw-neat`, etc., then `cdf deploy --env=...`
+- **Transformations**: `cdf build --env=hw-transformations` and `cdf deploy --env=hw-transformations`
+- **NEAT basic**: `cdf build --env=neat-basic` and `cdf deploy --env=neat-basic`
+- **Weather / Valhall**: See `README.weather.md` and `config.weather.yaml`
 
-### GitHub Repo to CDF Deployer (Streamlit App)
-- **Two access modes**: Public repositories (no GitHub account needed) and Private repositories (requires GitHub authentication)
-- **Download any GitHub repository** as a ZIP file
-- **Extract and process** the downloaded files
-- **Build** the project using `cdf build`
-- **Deploy** to CDF using `cdf deploy`
-- **Branch selection** - choose from available repository branches
-- **Debug mode** for detailed logging and troubleshooting
+## Documentation
 
-#### Running the Streamlit App
-The GitHub Repo Deployer is now properly integrated as a Cognite module. To use it:
-
-1. **Deploy the module** to your CDF project:
-   ```bash
-   cdf build && cdf deploy
-   ```
-
-2. **Access the app** from the CDF UI under Streamlit applications
-
-3. **Or run locally** for development:
-   ```bash
-   cd modules/admin/github-repo-deployer/streamlit/github-repo-deployer
-   ./run.sh
-   # or
-   streamlit run main.py
-   ```
-
-### Data Flow
-```
-Open-Meteo API → Hosted Extractor → Data Mapping → Destination → Workflow → Transformation → Time Series
-```
-
-## Customization
-
-### Changing Location
-To use a different location instead of Valhall:
-
-1. **Edit `config.all.yaml`**:
-   ```yaml
-   variables:
-     default_location: your_location  # Change from "valhall"
-   ```
-
-2. **Update API parameters in `modules/in-development/live_weather_data/hosted_extractors/rest.Job.yaml`**:
-   ```yaml
-   config:
-     query: {
-       "latitude": "YOUR_LATITUDE",
-       "longitude": "YOUR_LONGITUDE", 
-       "hourly": "temperature_2m",
-       "past_days": "90"
-     }
-   ```
-
-3. **Update asset association in transformation SQL** if needed
-
-## Dependencies
-
-- **Foundation Module**: Required for basic CDF setup
-- **Valhall Data Model**: Required for asset associations
-- **CDF Authentication**: Requires valid IDP credentials
-
-## Usage Examples
-
-### Accessing Temperature Data via CDF Client
-```python
-from cognite.client import CogniteClient
-
-client = CogniteClient()
-
-# Get temperature time series
-ts = client.time_series.retrieve(external_id="valhall_temperature")
-
-# Get recent temperature data
-data = client.time_series.data.retrieve(
-    external_id="valhall_temperature",
-    start="1d-ago",
-    end="now"
-)
-```
-
-### Using in Streamlit Applications
-```python
-import streamlit as st
-from cognite.client import CogniteClient
-
-client = CogniteClient()
-
-# Display current temperature
-data = client.time_series.data.retrieve(
-    external_id="valhall_temperature",
-    start="1h-ago",
-    end="now"
-)
-
-if data:
-    latest_temp = data[0].value
-    st.metric("Valhall Temperature", f"{latest_temp}°C")
-```
+- **Hello World set**: `readme.hw-all.md`
+- **hw-function**: `readme.hw-function.md`
+- **hw-neat**: `readme.hw-neat.md`
+- **hw-transformations**: `readme.hw-transformations.md`
+- **NEAT basic**: `readme.neat-basic.md`
+- **Weather/Valhall**: `README.weather.md`
 
 ## Troubleshooting
 
-### Check Hosted Extractor Status
-- Navigate to **Data Integration** → **Extraction pipelines** → **Hosted extractors**
-- Verify `valhall_rest_source` shows "Connected" and "Currently running"
-- Check throughput and last modified timestamps
-
-### Check Workflow Execution
-- Navigate to **Data Integration** → **Data workflows**
-- Verify `wf_live_weather_data_valhall` is executing successfully
-- Check execution history for any errors
-
-### Check Time Series Data
-- Navigate to **Search** → search for `valhall` → filter by **Time series**
-- Verify `valhall_temperature` exists with recent data
-- Check preview chart shows temperature variation over time
-
-### Common Issues
-- **API Failures**: Hosted extractor will retry on next scheduled run
-- **Authentication Issues**: Check IDP credentials in configuration
-- **Data Processing Errors**: Workflow will abort and retry with exponential backoff
-- **Asset Association Issues**: Verify data model is deployed
-
-## Performance Considerations
-
-- **Data Volume**: ~24 data points per day per location
-- **Storage**: Minimal impact on CDF storage
-- **API Limits**: Open-Meteo API has generous rate limits
-- **Processing**: Lightweight transformations with minimal compute impact
+- **Build/deploy**: Use `--env=all-hw` (or the env name that matches your `config.<env>.yaml`). Do not use `--config` with a file path for standard deploy.
+- **Functions**: Check the Functions UI for the correct space and that the function is deployed and callable.
+- **Streamlit**: Open the app from the CDF UI; ensure you have the right permissions and that any required data (e.g. time series) exists.
+- **NEAT**: Ensure the NEAT space and containers are deployed and that the Streamlit app’s dataset and permissions are correct.
+- **Time series**: For `hw-timeseries-streamlit`, run `scripts/populate_edr_timeseries.py` if the expected time series are missing.
