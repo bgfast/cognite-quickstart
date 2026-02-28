@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Delete cognite-quickstart-main-mini.zip file instances where uploaded=False"""
+"""List all file instances in app-packages space (Data Modeling API)."""
 
 from cognite.client import CogniteClient
 from cognite.client import ClientConfig
@@ -8,7 +8,7 @@ import os
 
 # Initialize client
 config = ClientConfig(
-    client_name="delete-unuploaded-files",
+    client_name="check-all-files",
     base_url=os.getenv("CDF_URL", "https://bluefield.cognitedata.com"),
     project=os.getenv("CDF_PROJECT"),
     credentials=OAuthClientCredentials(
@@ -21,7 +21,9 @@ config = ClientConfig(
 
 client = CogniteClient(config)
 
-print("🔍 Searching for cognite-quickstart-main-mini.zip instances in app-packages space...")
+print("=" * 80)
+print("DATA MODEL INSTANCES (app-packages space)")
+print("=" * 80)
 
 # Query data model for file instances
 instances = client.data_modeling.instances.list(
@@ -38,26 +40,35 @@ instances = client.data_modeling.instances.list(
     limit=1000
 )
 
-# Find instances with uploaded: False and matching name
-to_delete = []
+print(f"\n🔍 Found {len(instances)} file instances in data model\n")
+
 for instance in instances:
     props = instance.properties.get(("cdf_cdm", "CogniteFile/v1"), {})
-    name = props.get("name")
+    name = props.get("name", "N/A")
     uploaded = props.get("uploaded", False)
+    ext_id = instance.external_id
     
-    if name == "cognite-quickstart-main-mini.zip" and not uploaded:
-        print(f"  ❌ Found: {name} (uploaded: {uploaded}, externalId: {instance.external_id})")
-        to_delete.append(instance.external_id)
+    status = "✅" if uploaded else "❌"
+    print(f"{status} {name}")
+    print(f"   External ID: {ext_id}")
+    print(f"   Uploaded: {uploaded}")
+    print()
 
-if not to_delete:
-    print("✅ No unuploaded cognite-quickstart-main-mini.zip instances found")
-else:
-    print(f"\n🗑️  Deleting {len(to_delete)} instance(s)...")
-    for ext_id in to_delete:
-        client.data_modeling.instances.delete(
-            nodes=(("app-packages", ext_id),)
-        )
-        print(f"  ✅ Deleted: {ext_id}")
-    
-    print("\n✅ Cleanup complete! Now redeploy the module:")
-    print("   cdf deploy --env dev modules/app-packages-zips/")
+print("=" * 80)
+print("FILES API (all files)")
+print("=" * 80)
+
+# Query Files API
+all_files = client.files.list(limit=1000)
+zip_files = [f for f in all_files if f.name and f.name.endswith(".zip")]
+
+print(f"\n🔍 Found {len(zip_files)} zip files in Files API\n")
+
+for f in zip_files:
+    status = "✅" if f.uploaded else "❌"
+    print(f"{status} {f.name}")
+    print(f"   ID: {f.id}")
+    print(f"   External ID: {f.external_id}")
+    print(f"   Uploaded: {f.uploaded}")
+    print(f"   MIME Type: {f.mime_type}")
+    print()
