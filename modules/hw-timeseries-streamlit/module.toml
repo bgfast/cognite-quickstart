@@ -1,0 +1,20 @@
+[module]
+name = "hw-timeseries-streamlit"
+version = "1.0.0"
+description = "Hello World Time Series Streamlit - Reads from CDF time series (populate via scripts/populate_edr_timeseries.py)."
+author = "Cognite"
+license = "MIT"
+
+[module.dependencies]
+streamlit = ">=1.28.0"
+pandas = ">=2.0.0"
+plotly = ">=5.15.0"
+numpy = ">=1.24.0"
+openpyxl = ">=3.1.0"
+reportlab = ">=4.0.0"
+PyYAML = ">=6.0"
+
+[module.streamlit]
+main_file = "streamlit/hw-timeseries-streamlit/main.py"
+title = "HW Time Series Streamlit"
+icon = "📊"

@@ -1,8 +1,0 @@
-externalId: github-repo-deployer
-name: CDF Package Deployer
-creator: brent.groom@cognitedata.com
-description: "v2025.10.16.v8 - Made README heading larger using st.subheader"
-published: true
-theme: Light
-entrypoint: main.py
-dataSetExternalId: streamlit-github-deployer-dataset

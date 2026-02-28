@@ -1,6 +1,0 @@
-externalId: test-toolkit-api
-name: Test Toolkit API
-creator: brent.groom@cognitedata.com
-description: "v2025.10.05.v1 - Confirmed toolkit is CLI-based and READY FOR PRODUCTION"
-entrypoint: main.py
-dataSetExternalId: streamlit-test-toolkit-dataset
