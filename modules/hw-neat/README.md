@@ -28,7 +28,7 @@ The Neat Basic Data Model module provides:
 - `neat_integration_test.py` - End-to-end integration testing with Cognite Toolkit
 
 ### NEAT Generation Tools
-- `generate_edm_yaml_files.py` - Generate YAML files from NeatBasic.xlsx using NEAT (MANUALLY MAINTAINED)
+- `generate_cdf_dm_yaml_files_via_neat.py` - Generate YAML files from NeatBasic.xlsx using NEAT (MANUALLY MAINTAINED)
 - `NeatBasic.xlsx` - Excel file containing the NEAT data model definition (MANUALLY MAINTAINED - SOURCE OF TRUTH)
 
 ### Configuration
@@ -39,7 +39,7 @@ The Neat Basic Data Model module provides:
 ### MANUALLY MAINTAINED FILES (Edit These)
 These files should be edited and version controlled:
 - `NeatBasic.xlsx` - **Source of truth** for the data model
-- `generate_edm_yaml_files.py` - YAML generation script
+- `generate_cdf_dm_yaml_files_via_neat.py` - YAML generation script
 - `test_neat_data_model.py` - Test suite
 - `sample_data_generator.py` - Sample data generator
 - `neat_integration_test.py` - Integration tests
@@ -57,7 +57,7 @@ These files are automatically generated from `NeatBasic.xlsx`:
 
 **⚠️ IMPORTANT**: 
 - Never edit generated YAML files directly - your changes will be overwritten
-- Always modify `NeatBasic.xlsx` and run `python generate_edm_yaml_files.py` to regenerate
+- Always modify `NeatBasic.xlsx` and run `python generate_cdf_dm_yaml_files_via_neat.py` to regenerate
 - The Excel file is the single source of truth for the data model
 
 ## Usage
@@ -74,7 +74,7 @@ source ../../cdfenv.sh
 cdfenv bgfast  # or your environment name
 
 # Generate YAML files from Excel
-python generate_edm_yaml_files.py
+python generate_cdf_dm_yaml_files_via_neat.py
 ```
 
 This will:
@@ -251,7 +251,7 @@ cdf-tk deploy --env hw-neat
 
 The data model files in this module are generated using the neat library:
 - **Excel Source**: `NeatBasic.xlsx` contains the data model definition
-- **YAML Generation**: `generate_edm_yaml_files.py` processes Excel into toolkit YAML
+- **YAML Generation**: `generate_cdf_dm_yaml_files_via_neat.py` processes Excel into toolkit YAML
 - **Containers**: Define the data structure and validation rules
 - **Views**: Provide the interface for data access and querying
 - **Best Practices**: Generated following NEAT and CDF Toolkit conventions

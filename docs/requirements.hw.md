@@ -133,7 +133,7 @@ echo $CDF_CLUSTER
 cd modules/hw-neat
 
 # Generate YAML files from Excel
-python generate_edm_yaml_files.py
+python generate_cdf_dm_yaml_files_via_neat.py
 
 # Verify generation
 ls -la data_models/data_models/
@@ -443,7 +443,7 @@ chmod 644 modules/hw-neat/data_models/NeatBasic.xlsx
 
 # Regenerate
 cd modules/hw-neat
-python generate_edm_yaml_files.py
+python generate_cdf_dm_yaml_files_via_neat.py
 ```
 
 #### Issue: Function call timeout
@@ -516,7 +516,7 @@ cdf functions logs hello-world-function --tail 50
 - `modules/hw-neat/module.toml`
 - `modules/hw-neat/README.md`
 - `modules/hw-neat/data_models/HWNeatBasic.xlsx` ⭐ **SOURCE OF TRUTH**
-- `modules/hw-neat/generate_edm_yaml_files.py`
+- `modules/hw-neat/generate_cdf_dm_yaml_files_via_neat.py`
 - `modules/hw-neat/test_hw_neat.py`
 - `modules/hw-neat/sample_data_generator.py`
 - `modules/hw-neat/streamlit/hw-neat/main.py`
@@ -528,7 +528,7 @@ cdf functions logs hello-world-function --tail 50
 
 **hw-neat module only:**
 - `modules/hw-neat/data_models/data_models/**/*.yaml` - All YAML files in this directory
-- Regenerate by running: `python modules/hw-neat/generate_edm_yaml_files.py`
+- Regenerate by running: `python modules/hw-neat/generate_cdf_dm_yaml_files_via_neat.py`
 
 ## Quick Reference
 
@@ -553,7 +553,7 @@ cdf deploy --config config.hw-function.yaml
 ```bash
 # Edit modules/hw-neat/data_models/HWNeatBasic.xlsx
 cd modules/hw-neat
-python generate_edm_yaml_files.py
+python generate_cdf_dm_yaml_files_via_neat.py
 cd ../..
 cdf build --config config.hw-neat.yaml
 cdf deploy --config config.hw-neat.yaml

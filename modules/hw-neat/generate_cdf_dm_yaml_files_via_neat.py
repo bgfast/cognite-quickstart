@@ -5,11 +5,13 @@ This script processes the NeatBasic.xlsx data model file and generates CDF Toolk
 
 Usage:
     cd modules/hw-neat
-    python generate_edm_yaml_files.py
+    python generate_cdf_dm_yaml_files_via_neat.py
 
 Requirements:
     - cognite-neat package installed
-    - cdfenv.sh environment variables set
+    - CDF credentials via either:
+      - cdfenv: source cdfenv.sh && cdfenv <environment-name>
+      - .env file in repo root, module directory, or current directory
     - NeatBasic.xlsx file in data_models/ directory
 """
 
@@ -20,19 +22,59 @@ from cognite.neat import NeatSession
 from cognite.client import CogniteClient
 from cognite.client.credentials import OAuthClientCredentials
 
+# Required env vars for CDF connection (CDF_URL can be derived from CDF_CLUSTER)
+_REQUIRED_ENV = ("CDF_PROJECT", "CDF_CLUSTER", "CDF_URL")
+_IDP_ENV = ("IDP_TOKEN_URL", "IDP_CLIENT_ID", "IDP_CLIENT_SECRET", "IDP_SCOPES")
+
+def _load_dotenv_if_needed():
+    """Load .env file when required CDF env vars are missing (e.g. cdfenv was not run)."""
+    have = sum(1 for k in _REQUIRED_ENV if os.environ.get(k))
+    if have == len(_REQUIRED_ENV):
+        return
+    try:
+        from dotenv import load_dotenv
+    except ImportError:
+        return
+    script_dir = Path(__file__).resolve().parent
+    candidates = [
+        Path.cwd() / ".env",
+        Path.cwd() / ".env.local",
+        script_dir / ".env",
+        script_dir / ".env.local",
+        script_dir.parent.parent / ".env",
+        script_dir.parent.parent / ".env.local",
+    ]
+    for path in candidates:
+        if path.is_file():
+            load_dotenv(path, override=False)
+            if sum(1 for k in _REQUIRED_ENV if os.environ.get(k)) == len(_REQUIRED_ENV):
+                return
+
+def _ensure_cdf_url():
+    """Set CDF_URL from CDF_CLUSTER if missing (common in .env files)."""
+    if os.environ.get("CDF_URL"):
+        return
+    cluster = os.environ.get("CDF_CLUSTER")
+    if cluster:
+        os.environ["CDF_URL"] = f"https://{cluster}.cognitedata.com"
+
 def get_cognite_client():
     """
-    Initialize CogniteClient using cdfenv.sh environment variables
+    Initialize CogniteClient using environment variables (from cdfenv or .env).
     """
-    # Get environment variables from cdfenv.sh
-    cdf_project = os.environ.get('CDF_PROJECT')
-    cdf_cluster = os.environ.get('CDF_CLUSTER')
-    cdf_url = os.environ.get('CDF_URL')
-    
+    _load_dotenv_if_needed()
+    _ensure_cdf_url()
+
+    cdf_project = os.environ.get("CDF_PROJECT")
+    cdf_cluster = os.environ.get("CDF_CLUSTER")
+    cdf_url = os.environ.get("CDF_URL")
+
     if not all([cdf_project, cdf_cluster, cdf_url]):
         raise ValueError(
-            "Missing required environment variables. "
-            "Please run: source cdfenv.sh && cdfenv <environment-name>"
+            "Missing required environment variables (CDF_PROJECT, CDF_CLUSTER, CDF_URL). "
+            "Either run: source cdfenv.sh && cdfenv <environment-name> "
+            "or add them to a .env file in the repo root, module directory, or current directory. "
+            "Optional: pip install python-dotenv to load .env automatically."
         )
     
     # Use OAuth credentials from cdfenv.sh environment variables

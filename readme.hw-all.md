@@ -175,7 +175,7 @@ cognite-quickstart/
         ├── data_models/
         │   ├── HWNeatBasic.xlsx # Excel source (manually maintained)
         │   └── data_models/     # Generated YAML files
-        ├── generate_edm_yaml_files.py
+        ├── generate_cdf_dm_yaml_files_via_neat.py
         ├── test_neat_data_model.py
         └── streamlit/
             └── hw-neat/
@@ -282,7 +282,7 @@ python -c "import cognite.neat; print('NEAT OK')"
 
 # Regenerate YAML
 cd modules/hw-neat
-python generate_edm_yaml_files.py
+python generate_cdf_dm_yaml_files_via_neat.py
 ```
 
 ## 🔄 Update Workflow
@@ -293,7 +293,7 @@ If you modify `HWNeatBasic.xlsx`:
 
 ```bash
 cd modules/hw-neat
-python generate_edm_yaml_files.py
+python generate_cdf_dm_yaml_files_via_neat.py
 cdf build --config config.hw-neat.yaml
 cdf deploy --config config.hw-neat.yaml
 ```

@@ -48,3 +48,7 @@ node_modules/
 
 # Jupyter notebook checkpoints
 .ipynb_checkpoints/
+
+# Personal hw-neat Streamlit apps (setup_personal_hw_neat_app.py copies)
+modules/hw-neat/streamlit/hw-neat-*/
+modules/hw-neat/streamlit/hw-neat-*.Streamlit.yaml

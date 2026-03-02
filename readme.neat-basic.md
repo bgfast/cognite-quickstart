@@ -31,7 +31,7 @@ modules/neat-basic/
 │   │   └── requirements.txt              # Python dependencies
 │   ├── neat-basic.Streamlit.yaml         # Streamlit app configuration
 │   └── README.md                         # Streamlit app documentation
-├── generate_edm_yaml_files.py            # NEAT YAML generation script
+├── generate_cdf_dm_yaml_files_via_neat.py            # NEAT YAML generation script
 ├── test_neat_basic.py                    # Comprehensive test suite
 ├── sample_data_generator.py              # Sample data generation
 ├── integration_test.py                   # Integration testing
@@ -54,7 +54,7 @@ pip install cognite-neat
 cd modules/neat-basic
 
 # Generate YAML files from Excel model
-python generate_edm_yaml_files.py
+python generate_cdf_dm_yaml_files_via_neat.py
 ```
 
 ### 3. Deploy to CDF
@@ -163,7 +163,7 @@ Key configuration parameters:
 
 ### 2. Generation Phase
 ```bash
-python generate_edm_yaml_files.py
+python generate_cdf_dm_yaml_files_via_neat.py
 ```
 - Reads Excel file
 - Generates YAML files in `data_models/` directory
@@ -206,7 +206,7 @@ neat_item_003,Sample data value 3
 ### Extending the Data Model
 
 1. **Update Excel File**: Modify `NeatBasic.xlsx` with new properties
-2. **Regenerate YAML**: Run `generate_edm_yaml_files.py`
+2. **Regenerate YAML**: Run `generate_cdf_dm_yaml_files_via_neat.py`
 3. **Update Streamlit**: Modify forms in `streamlit/neat-basic/main.py`
 4. **Update Tests**: Add tests for new properties in `test_neat_basic.py`
 

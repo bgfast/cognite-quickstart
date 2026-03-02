@@ -902,7 +902,7 @@ modules/neat-basic/
 │   └── README.md                         # Streamlit apps documentation
 ├── data_sets/
 │   └── neat-basic-dataset.DataSet.yaml   # Dataset for governance
-├── generate_edm_yaml_files.py            # NEAT YAML generation script
+├── generate_cdf_dm_yaml_files_via_neat.py            # NEAT YAML generation script
 ├── test_neat_data_model.py               # Comprehensive testing script
 ├── sample_data_generator.py              # Sample data generation
 ├── neat_integration_test.py              # End-to-end integration tests
@@ -924,7 +924,7 @@ source ../../cdfenv.sh
 cdfenv bgfast
 
 # Generate YAML files from Excel
-python generate_edm_yaml_files.py
+python generate_cdf_dm_yaml_files_via_neat.py
 ```
 
 #### 3. Fix Common NEAT Issues
@@ -1092,13 +1092,13 @@ variables:
 - Use consistent naming conventions
 
 #### YAML Generation
-- Always run `generate_edm_yaml_files.py` after Excel changes
+- Always run `generate_cdf_dm_yaml_files_via_neat.py` after Excel changes
 - Review generated files for format issues
 - Fix container property structures manually if needed
 - Remove empty filter sections from views
 
 #### Testing Workflow
-1. **Generate YAML**: `python generate_edm_yaml_files.py`
+1. **Generate YAML**: `python generate_cdf_dm_yaml_files_via_neat.py`
 2. **Test locally**: Run testing scripts before deployment
 3. **Deploy with dry-run**: Always preview changes first
 4. **Validate deployment**: Use integration tests after deployment
@@ -1237,7 +1237,7 @@ cdf build --env=app-packages-zips && cdf deploy --env=app-packages-zips --dry-ru
 ```bash
 # Complete NEAT workflow: Excel → YAML → Deploy → Apps
 cd modules/neat-basic
-python generate_edm_yaml_files.py
+python generate_cdf_dm_yaml_files_via_neat.py
 cd ../..
 cdf build --env=neat-basic
 cdf deploy --env=neat-basic --dry-run  
@@ -1289,7 +1289,7 @@ Set up a new data model module using neat library with basic containers and view
 ### "Generate YAML from NEAT Excel file"
 ```
 Process NeatBasic.xlsx using NEAT library to generate CDF Toolkit YAML files:
-1. Run python generate_edm_yaml_files.py in neat-basic module
+1. Run python generate_cdf_dm_yaml_files_via_neat.py in neat-basic module
 2. Fix any Excel format issues (View definitions, empty filters)
 3. Correct container property formats (add list, collation, etc.)
 4. Deploy with config.neat-basic.yaml
@@ -1298,7 +1298,7 @@ Process NeatBasic.xlsx using NEAT library to generate CDF Toolkit YAML files:
 ### "Deploy NEAT Basic module with Streamlit apps"
 ```
 Deploy the complete NEAT Basic system: Excel → YAML → Deploy → Streamlit apps
-1. Generate YAML from Excel: python generate_edm_yaml_files.py
+1. Generate YAML from Excel: python generate_cdf_dm_yaml_files_via_neat.py
 2. Build: cdf build --env=neat-basic
 3. Dry-run: cdf deploy --env=neat-basic --dry-run
 4. Deploy: cdf deploy --env=neat-basic
