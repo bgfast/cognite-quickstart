@@ -70,13 +70,13 @@ When many people (e.g. 20) each clone the repo and deploy the **hw-neat** Stream
 python scripts/setup_personal_hw_neat_app.py <suffix>
 ```
 
-**What the script does:** Copies `modules/hw-neat/streamlit/hw-neat/` to `streamlit/hw-neat-<suffix>/` and creates `streamlit/hw-neat-<suffix>.Streamlit.yaml` with `externalId: hw-neat-<suffix>`. The default app is **not modified** (stays under source control). The script is verbose: it prints every path, every file/directory created, and the exact YAML content written.
+**What the script does:** Creates a new **module** `modules/hw-neat-<suffix>/` (with module.toml, data_sets, and Streamlit app copied from the default) and a **config** `config.hw-neat-<suffix>.yaml` that selects both `modules/hw-neat` and `modules/hw-neat-<suffix>`. The default app in `modules/hw-neat` is not modified.
 
 **Suffix rules:** Lowercase letters, numbers, or hyphens (e.g. `jag`, `alice`, `user-01`). Each person must use a different suffix.
 
-**After running:** Build and deploy as usual (`cdf build --env hw-neat`, `cdf deploy --env hw-neat`). Deploy pushes **both** the default app and your personal app. In CDF, **use “Hello World NEAT (&lt;suffix&gt;)”** so you don’t overwrite others’ work on the shared default.
+**After running:** Build and deploy with the new config: `cdf build --env hw-neat-<suffix>`, `cdf deploy --env hw-neat-<suffix>`. In CDF, **use “Hello World NEAT (&lt;suffix&gt;)”** so you don’t overwrite others’ work on the shared default.
 
-**Instructors:** Before the session, have everyone pick (or assign) a unique suffix. If someone wants to switch suffix later, remove `modules/hw-neat/streamlit/hw-neat-<old>/` and `hw-neat-<old>.Streamlit.yaml`, then run the script again with the new suffix.
+**Instructors:** Before the session, have everyone pick (or assign) a unique suffix. To switch suffix later, remove `modules/hw-neat-<old>/` and `config.hw-neat-<old>.yaml`, then run the script again with the new suffix.
 
 ---
 

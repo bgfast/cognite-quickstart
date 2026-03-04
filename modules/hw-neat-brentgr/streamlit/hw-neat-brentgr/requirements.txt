@@ -1,0 +1,6 @@
+streamlit
+cognite-sdk
+pandas
+plotly
+numpy
+pyodide-http

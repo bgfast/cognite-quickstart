@@ -1,0 +1,6 @@
+externalId: hw-neat-brentgr2
+name: Hello World NEAT (brentgr2)
+creator: brent.groom@cognite.com
+description: "v2026.03.04.v1 - Hello World NEAT data management interface demo (brentgr2)"
+entrypoint: main.py
+dataSetExternalId: hw-neat-dataset

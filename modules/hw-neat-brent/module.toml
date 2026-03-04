@@ -1,0 +1,11 @@
+[module]
+title = "Hello World NEAT (brent)"
+
+[packages]
+tags = [
+    "hello-world",
+    "neat",
+    "data-model",
+    "demo",
+    "personal",
+]

@@ -6,10 +6,14 @@ Creates time series and datapoints for use with the HW Time Series Streamlit app
 Pattern based on azure-eventhub-extractor: time_series.create() and time_series.data.insert().
 
 Usage:
-  cdfenv bgfast   # or set CDF env
   python scripts/populate_edr_timeseries.py
 
-Requires: CDF credentials (CDF_PROJECT, CDF_URL, IDP_*). Loads from env or ~/envs/.env.bluefield.cog-bgfast.bgfast.
+Requires: CDF credentials (CDF_PROJECT, CDF_URL, IDP_*). Loaded from:
+  - .env in repo root (recommended)
+  - .env in current working directory
+  - Existing process environment
+
+Requires: pip install python-dotenv
 """
 
 from datetime import datetime, timedelta
@@ -18,16 +22,23 @@ import os
 import sys
 import numpy as np
 
-# Load CDF env (same pattern as streamlit-github-deployer)
-def _load_cdf_env():
-    env_path = os.path.expanduser("~/envs/.env.bluefield.cog-bgfast.bgfast")
-    if os.path.exists(env_path):
-        try:
-            from dotenv import load_dotenv
-            load_dotenv(env_path, override=True)
-        except ImportError:
-            pass
-_load_cdf_env()
+from dotenv import load_dotenv
+
+
+def _load_dotenv():
+    """Load .env from repo root and cwd using python-dotenv."""
+    _script_dir = os.path.abspath(os.path.dirname(os.path.abspath(__file__)))
+    repo_root = os.path.dirname(_script_dir)
+    for name in (".env", ".env.local"):
+        path = os.path.join(repo_root, name)
+        if os.path.isfile(path):
+            load_dotenv(path, override=False)
+    cwd_env = os.path.join(os.getcwd(), ".env")
+    if os.path.isfile(cwd_env):
+        load_dotenv(cwd_env, override=True)
+
+
+_load_dotenv()
 
 # External ID prefix for all time series (HW Time Series Streamlit reads by this)
 EXTERNAL_ID_PREFIX = "edr_training_"
@@ -117,8 +128,9 @@ def main():
     client_secret = os.getenv("IDP_CLIENT_SECRET")
     token_url = os.getenv("IDP_TOKEN_URL")
     if not all([cdf_url, cdf_project, client_id, client_secret, token_url]):
-        print("Missing CDF credentials. Run: cdfenv bgfast")
-        print("Or set: CDF_URL, CDF_PROJECT, IDP_CLIENT_ID, IDP_CLIENT_SECRET, IDP_TOKEN_URL")
+        print("Missing CDF credentials.")
+        print("  Use a .env file in the repo root (or cwd) with CDF_PROJECT, CDF_URL, IDP_CLIENT_ID, IDP_CLIENT_SECRET, IDP_TOKEN_URL")
+        print("  Or set them in the shell (e.g. cdfenv <env>). Install python-dotenv to load .env automatically.")
         sys.exit(1)
 
     credentials = OAuthClientCredentials(
