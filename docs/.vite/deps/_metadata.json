@@ -1,0 +1,115 @@
+{
+  "hash": "4ffcc750",
+  "configHash": "9456d4bf",
+  "lockfileHash": "5d48a8bc",
+  "browserHash": "243b9ffd",
+  "optimized": {
+    "@slidev/cli > @slidev/client > @typescript/ata": {
+      "src": "../../../node_modules/@typescript/ata/dist/index.js",
+      "file": "@slidev_cli___@slidev_client___@typescript_ata.js",
+      "fileHash": "bcebc52d",
+      "needsInterop": false
+    },
+    "@slidev/cli > @slidev/client > file-saver": {
+      "src": "../../../node_modules/file-saver/dist/FileSaver.min.js",
+      "file": "@slidev_cli___@slidev_client___file-saver.js",
+      "fileHash": "e99e4e13",
+      "needsInterop": true
+    },
+    "@slidev/cli > @slidev/client > lz-string": {
+      "src": "../../../node_modules/lz-string/libs/lz-string.js",
+      "file": "@slidev_cli___@slidev_client___lz-string.js",
+      "fileHash": "ec5bdd5f",
+      "needsInterop": true
+    },
+    "@slidev/cli > @slidev/client > recordrtc": {
+      "src": "../../../node_modules/recordrtc/RecordRTC.js",
+      "file": "@slidev_cli___@slidev_client___recordrtc.js",
+      "fileHash": "4d46e790",
+      "needsInterop": true
+    },
+    "@slidev/cli > @slidev/client > typescript": {
+      "src": "../../../node_modules/typescript/lib/typescript.js",
+      "file": "@slidev_cli___@slidev_client___typescript.js",
+      "fileHash": "2dfc1b38",
+      "needsInterop": true
+    },
+    "@slidev/cli > @slidev/client > yaml": {
+      "src": "../../../node_modules/yaml/browser/index.js",
+      "file": "@slidev_cli___@slidev_client___yaml.js",
+      "fileHash": "9db25bf9",
+      "needsInterop": false
+    },
+    "@slidev/cli > @slidev/client > pptxgenjs": {
+      "src": "../../../node_modules/pptxgenjs/dist/pptxgen.es.js",
+      "file": "@slidev_cli___@slidev_client___pptxgenjs.js",
+      "fileHash": "3e26199f",
+      "needsInterop": false
+    },
+    "@slidev/cli > @slidev/client > ansis": {
+      "src": "../../../node_modules/ansis/index.mjs",
+      "file": "@slidev_cli___@slidev_client___ansis.js",
+      "fileHash": "fec6f3f0",
+      "needsInterop": false
+    },
+    "@shikijs/engine-javascript": {
+      "src": "../../../node_modules/@shikijs/engine-javascript/dist/index.mjs",
+      "file": "@shikijs_engine-javascript.js",
+      "fileHash": "000846b0",
+      "needsInterop": false
+    },
+    "ansis": {
+      "src": "../../../node_modules/ansis/index.mjs",
+      "file": "ansis.js",
+      "fileHash": "afe6cc91",
+      "needsInterop": false
+    },
+    "file-saver": {
+      "src": "../../../node_modules/file-saver/dist/FileSaver.min.js",
+      "file": "file-saver.js",
+      "fileHash": "5d16645c",
+      "needsInterop": true
+    },
+    "nanotar": {
+      "src": "../../../node_modules/nanotar/dist/index.mjs",
+      "file": "nanotar.js",
+      "fileHash": "e1e1911c",
+      "needsInterop": false
+    },
+    "pptxgenjs": {
+      "src": "../../../node_modules/pptxgenjs/dist/pptxgen.es.js",
+      "file": "pptxgenjs.js",
+      "fileHash": "090eb166",
+      "needsInterop": false
+    },
+    "recordrtc": {
+      "src": "../../../node_modules/recordrtc/RecordRTC.js",
+      "file": "recordrtc.js",
+      "fileHash": "ae24fd3a",
+      "needsInterop": true
+    }
+  },
+  "chunks": {
+    "node_fs-YNKJHPX4": {
+      "file": "node_fs-YNKJHPX4.js"
+    },
+    "node_https-HKDKIPSF": {
+      "file": "node_https-HKDKIPSF.js"
+    },
+    "chunk-C662BYIG": {
+      "file": "chunk-C662BYIG.js"
+    },
+    "chunk-JROUPOQY": {
+      "file": "chunk-JROUPOQY.js"
+    },
+    "chunk-VZ7PKO5P": {
+      "file": "chunk-VZ7PKO5P.js"
+    },
+    "chunk-Z54ZMWMQ": {
+      "file": "chunk-Z54ZMWMQ.js"
+    },
+    "chunk-PR4QN5HX": {
+      "file": "chunk-PR4QN5HX.js"
+    }
+  }
+}

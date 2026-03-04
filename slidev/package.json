@@ -1,0 +1,16 @@
+{
+  "name": "atlas-ai-slides-slidev",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Slidev build and export for Atlas AI training slides (PPTX/PDF).",
+  "scripts": {
+    "slides": "slidev ../docs/atlas-ai-training-slides.md --open",
+    "export:pptx": "slidev export ../docs/atlas-ai-training-slides.md --format pptx --output ../docs/slides/atlas-ai-training-slides.pptx",
+    "export:pdf": "slidev export ../docs/atlas-ai-training-slides.md --format pdf"
+  },
+  "devDependencies": {
+    "@slidev/cli": "^52.0.0",
+    "@slidev/theme-default": "^0.25.0",
+    "playwright-chromium": "^1.49.0"
+  }
+}
