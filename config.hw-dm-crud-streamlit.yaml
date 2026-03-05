@@ -11,7 +11,7 @@ environment:
   ### ===========================================
   ### HELLO WORLD NEAT DATA MODEL & APPS
   ### ===========================================
-  - modules/hw-neat                          ### Hello World NEAT data model + Streamlit apps
+  - modules/hw-dm-crud-streamlit
 
   ### ===========================================
   ### ADMINISTRATION & MANAGEMENT (Optional)

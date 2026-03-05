@@ -1,0 +1,38 @@
+environment:
+  name: bgfast
+  project: bgfast
+  validation-type: dev
+  selected:
+  ### ===========================================
+  ### HELLO WORLD MODULES - Complete Demo Set
+  ### ===========================================
+  ### This configuration deploys a complete set
+  ### of Hello World examples demonstrating:
+  ### - Function + Streamlit integration
+  ### - NEAT data modeling with Excel
+  ### - Complete CRUD operations
+  ### - Real-world patterns and best practices
+  ### ===========================================
+  
+  ### Hello World NEAT Data Model
+  - modules/hw-dm-neat-cli
+
+variables:
+  
+  # Authentication Configuration
+  superuser_sourceid: ${SUPERUSER_SOURCEID_ENV} # Source id for the super users in auth
+  my_user_identifier: ${USER_IDENTIFIER}     # User identifier for custom_access_management
+  readwrite_source_id: ${SUPERUSER_SOURCEID_ENV}
+
+  # CDF Configuration (populated from .env file)
+  CDF_PROJECT: ${CDF_PROJECT}
+  CDF_CLUSTER: ${CDF_CLUSTER}
+  CDF_URL: https://${CDF_CLUSTER}.cognitedata.com
+  
+  # IDP Configuration
+  IDP_CLIENT_ID: ${IDP_CLIENT_ID}
+  IDP_CLIENT_SECRET: ${IDP_CLIENT_SECRET}
+  IDP_SCOPES: ${IDP_SCOPES}
+  IDP_TENANT_ID: ${IDP_TENANT_ID}
+  IDP_TOKEN_URL: ${IDP_TOKEN_URL}
+  

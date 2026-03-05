@@ -19,8 +19,9 @@ This document provides a comprehensive guide to deploying and verifying the Hell
 | Software | Version | Purpose | Installation |
 |----------|---------|---------|--------------|
 | Python | 3.11+ | Runtime environment | [python.org](https://www.python.org/) |
-| CDF Toolkit | Latest | Deployment tool | `pip install cognite-toolkit` |
-| NEAT | Latest | Data modeling (hw-neat only) | `pip install cognite-neat` |
+| Poetry | 1.8+ | **Preferred** dependency manager | [python-poetry.org](https://python-poetry.org/docs/#installation) |
+| CDF Toolkit | Latest | Deployment tool | via Poetry or `pip install cognite-toolkit` |
+| NEAT | Latest | Data modeling (hw-neat only) | via Poetry or `pip install cognite-neat` |
 | Git | 2.0+ | Version control | [git-scm.com](https://git-scm.com/) |
 
 ### Required Access
@@ -98,6 +99,79 @@ ls -la modules/hw-neat
 
 ### Step 2: Install Dependencies
 
+**Poetry is the preferred approach.** It manages a virtual environment automatically and locks dependency versions for reproducible installs. Use pip only if Poetry is not available.
+
+---
+
+#### ⭐ Preferred: Poetry
+
+If there is no `pyproject.toml` in the repo root yet, initialise one:
+
+```bash
+# Install Poetry (if not already installed)
+curl -sSL https://install.python-poetry.org | python3 -
+
+# Create pyproject.toml (run once, in repo root)
+poetry init --name cognite-quickstart --python ">=3.11,<4.0" --no-interaction
+
+# Add the required packages
+poetry add cognite-toolkit cognite-neat
+
+# Install all dependencies into a managed virtual environment
+poetry install
+
+# Verify
+poetry run cdf --version
+poetry run python -c "import cognite.neat; print('NEAT OK')"
+```
+
+A minimal `pyproject.toml` looks like this:
+
+```toml
+[tool.poetry]
+name = "cognite-quickstart"
+version = "0.1.0"
+description = "Cognite quickstart Hello World modules"
+authors = []
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.11,<4.0"
+cognite-toolkit = "*"
+cognite-neat = "*"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+```
+
+Once `pyproject.toml` exists, any team member can install everything with a single command:
+
+```bash
+poetry install
+```
+
+Run any CLI command via Poetry (no need to manually activate the virtual environment):
+
+```bash
+poetry run cdf build --config config.all-hw.yaml
+poetry run cdf deploy --config config.all-hw.yaml
+```
+
+Or activate the virtual environment for an interactive session:
+
+```bash
+poetry shell
+# Now cdf, python, etc. are all on PATH
+cdf --version
+```
+
+---
+
+#### Alternative: pip
+
+If Poetry is not available, install packages directly:
+
 ```bash
 # Install CDF Toolkit
 pip install cognite-toolkit
@@ -171,10 +245,10 @@ ls -la data_models/data_models/
 ### Pre-Deployment
 
 - [ ] Python 3.11+ installed
-- [ ] CDF Toolkit installed
-- [ ] NEAT installed (if deploying hw-neat)
+- [ ] Poetry installed (preferred) **or** pip available (alternative)
+- [ ] Dependencies installed via `poetry install` or `pip install cognite-toolkit cognite-neat`
 - [ ] Environment variables configured
-- [ ] Authentication tested
+- [ ] Authentication tested (`poetry run cdf auth verify` or `cdf auth verify`)
 - [ ] YAML files generated (for hw-neat)
 
 ### Deployment Commands
@@ -182,24 +256,31 @@ ls -la data_models/data_models/
 #### Option 1: Deploy All Hello World Modules
 
 ```bash
-# Build
+# ⭐ Poetry (preferred)
+poetry run cdf build --config config.all-hw.yaml
+poetry run cdf deploy --config config.all-hw.yaml --dry-run  # dry run first
+poetry run cdf deploy --config config.all-hw.yaml
+
+# Alternative: pip / activated venv
 cdf build --config config.all-hw.yaml
-
-# Dry run (recommended first)
 cdf deploy --config config.all-hw.yaml --dry-run
-
-# Deploy
 cdf deploy --config config.all-hw.yaml
 ```
 
 #### Option 2: Deploy Individual Modules
 
 ```bash
-# Deploy hw-function only
+# ⭐ Poetry (preferred)
+poetry run cdf build --config config.hw-function.yaml
+poetry run cdf deploy --config config.hw-function.yaml
+
+poetry run cdf build --config config.hw-neat.yaml
+poetry run cdf deploy --config config.hw-neat.yaml
+
+# Alternative: pip / activated venv
 cdf build --config config.hw-function.yaml
 cdf deploy --config config.hw-function.yaml
 
-# Deploy hw-neat only
 cdf build --config config.hw-neat.yaml
 cdf deploy --config config.hw-neat.yaml
 ```
@@ -406,6 +487,10 @@ echo $IDP_CLIENT_ID
 source cdfenv.sh
 
 # Test authentication
+# ⭐ Poetry
+poetry run cdf auth verify
+
+# Alternative: pip
 cdf auth verify
 ```
 
@@ -418,11 +503,46 @@ ModuleNotFoundError: No module named 'cognite.neat'
 
 **Solution:**
 ```bash
-# Install NEAT
-pip install cognite-neat
+# ⭐ Poetry (preferred)
+poetry add cognite-neat
+poetry run python -c "import cognite.neat; print(cognite.neat.__version__)"
 
-# Verify installation
+# Alternative: pip
+pip install cognite-neat
 python -c "import cognite.neat; print(cognite.neat.__version__)"
+```
+
+#### Issue: `cdf` command not found when using Poetry
+
+**Symptoms:**
+```
+command not found: cdf
+```
+
+**Cause:** The Poetry virtual environment is not activated.
+
+**Solution:**
+```bash
+# Option A: prefix every command with poetry run
+poetry run cdf --version
+
+# Option B: activate the virtual environment for the session
+poetry shell
+cdf --version
+```
+
+#### Issue: Poetry `pyproject.toml` not found
+
+**Symptoms:**
+```
+Poetry could not find a pyproject.toml file
+```
+
+**Solution:** Run all `poetry` commands from the repo root (`cognite-quickstart/`), where `pyproject.toml` lives.
+
+```bash
+cd /path/to/cognite-quickstart
+poetry install
 ```
 
 #### Issue: YAML generation fails (hw-neat)
@@ -479,22 +599,24 @@ Function call timed out after 60 seconds
 ### Debug Commands
 
 ```bash
-# Verbose build
+# ⭐ Poetry (preferred) — prefix each command with poetry run
+poetry run cdf build --config config.all-hw.yaml -v
+poetry run cdf deploy --config config.all-hw.yaml -v
+poetry run cdf functions retrieve hello-world-function
+poetry run cdf streamlit retrieve hello-world-streamlit
+poetry run cdf spaces retrieve hw-neat
+poetry run cdf functions logs hello-world-function --tail 50
+
+# Alternative: pip / activated venv
 cdf build --config config.all-hw.yaml -v
-
-# Verbose deployment
 cdf deploy --config config.all-hw.yaml -v
-
-# Check build output
-ls -la build/
-
-# View specific resource
 cdf functions retrieve hello-world-function
 cdf streamlit retrieve hello-world-streamlit
 cdf spaces retrieve hw-neat
-
-# Check logs
 cdf functions logs hello-world-function --tail 50
+
+# Both: check build output
+ls -la build/
 ```
 
 ## File Management Reference
@@ -535,6 +657,12 @@ cdf functions logs hello-world-function --tail 50
 ### Deploy Everything
 
 ```bash
+# ⭐ Poetry (preferred)
+source cdfenv.sh  # or .env
+poetry run cdf build --config config.all-hw.yaml
+poetry run cdf deploy --config config.all-hw.yaml
+
+# Alternative: pip
 source cdfenv.sh
 cdf build --config config.all-hw.yaml
 cdf deploy --config config.all-hw.yaml
@@ -544,6 +672,12 @@ cdf deploy --config config.all-hw.yaml
 
 ```bash
 # Edit modules/hw-function/functions/hello-world-function/handler.py
+
+# ⭐ Poetry
+poetry run cdf build --config config.hw-function.yaml
+poetry run cdf deploy --config config.hw-function.yaml
+
+# Alternative: pip
 cdf build --config config.hw-function.yaml
 cdf deploy --config config.hw-function.yaml
 ```
@@ -552,6 +686,13 @@ cdf deploy --config config.hw-function.yaml
 
 ```bash
 # Edit modules/hw-neat/data_models/HWNeatBasic.xlsx
+
+# ⭐ Poetry
+poetry run python modules/hw-neat/generate_cdf_dm_yaml_files_via_neat.py
+poetry run cdf build --config config.hw-neat.yaml
+poetry run cdf deploy --config config.hw-neat.yaml
+
+# Alternative: pip
 cd modules/hw-neat
 python generate_cdf_dm_yaml_files_via_neat.py
 cd ../..
@@ -562,10 +703,13 @@ cdf deploy --config config.hw-neat.yaml
 ### Clean Up
 
 ```bash
-# Remove deployed resources
+# ⭐ Poetry
+poetry run cdf clean --config config.all-hw.yaml
+
+# Alternative: pip
 cdf clean --config config.all-hw.yaml
 
-# Remove build artifacts
+# Remove build artifacts (both)
 rm -rf build/
 ```
 

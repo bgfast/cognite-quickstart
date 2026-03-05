@@ -1,6 +1,6 @@
-externalId: hw-neat
+externalId: hw-dm-crud-streamlit
 name: Hello World NEAT
 creator: brent.groom@cognitedata.com
 description: "v2025.10.05.v1 - Hello World NEAT data management interface demo"
 entrypoint: main.py
-dataSetExternalId: hw-neat-dataset
+dataSetExternalId: hw-dm-crud-streamlit-dataset

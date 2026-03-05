@@ -1,0 +1,24 @@
+[project]
+name = "cognite-quickstart"
+version = "0.1.0"
+description = "Cognite Data Fusion quickstart — Hello World modules and supporting scripts"
+authors = []
+readme = "README.md"
+requires-python = ">=3.11,<4.0"
+
+dependencies = [
+    # CDF platform tools
+    "cognite-toolkit>=0.5.90",
+    "cognite-sdk>=7.0.0",
+    "cognite-neat>=0.123.39",
+    # Scripts
+    "python-dotenv>=1.0.0",
+    "numpy>=1.24.0",
+]
+
+[tool.poetry.group.dev.dependencies]
+# Add dev-only tools here (linters, formatters, test runners, etc.)
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
