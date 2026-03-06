@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-One-time setup so each person can deploy their own hw-neat Streamlit app in a dedicated module.
+One-time setup so each person can deploy their own hw-dm-crud-streamlit app in a dedicated module.
 
 Use in training when many people deploy from their own clone: each person gets a new module
-modules/hw-neat-<suffix>/ and a config config.hw-neat-<suffix>.yaml. The default app stays
-in modules/hw-neat and is not modified.
+modules/hw-dm-crud-streamlit-<suffix>/ and a config config.hw-dm-crud-streamlit-<suffix>.yaml.
+The shared base module (modules/hw-dm-crud-streamlit) is not modified.
 
 Usage (from repo root):
   python scripts/setup_personal_hw_neat_app.py <suffix>
@@ -14,10 +14,16 @@ Examples:
   python scripts/setup_personal_hw_neat_app.py alice
 
 What it does:
-  1. Creates modules/hw-neat-<suffix>/ with module.toml, data_sets, and streamlit app (copied from modules/hw-neat/streamlit/hw-neat/).
-  2. Creates config.hw-neat-<suffix>.yaml that selects modules/hw-neat and modules/hw-neat-<suffix>.
+  1. Creates modules/hw-dm-crud-streamlit-<suffix>/ with module.toml, data_sets, and streamlit
+     app files copied from modules/hw-dm-crud-streamlit/streamlit/hw-dm-crud-streamlit/.
+  2. Creates config.hw-dm-crud-streamlit-<suffix>.yaml that selects both
+     modules/hw-dm-crud-streamlit (shared data model + base app) and
+     modules/hw-dm-crud-streamlit-<suffix> (personal app).
 
-After running, use: cdf build --env hw-neat-<suffix> and cdf deploy --env hw-neat-<suffix>.
+After running:
+  cdf build --env hw-dm-crud-streamlit-<suffix>
+  cdf deploy --env hw-dm-crud-streamlit-<suffix> --dry-run
+  cdf deploy --env hw-dm-crud-streamlit-<suffix>
 """
 
 import argparse
@@ -28,12 +34,12 @@ import sys
 from datetime import date
 from pathlib import Path
 
-SOURCE_MODULE = "modules/hw-neat"
-SOURCE_APP_DIR = "streamlit/hw-neat"
-SOURCE_DATASET = "data_sets/hw-neat-dataset.DataSet.yaml"
+SOURCE_MODULE = "modules/hw-dm-crud-streamlit"
+SOURCE_APP_SUBDIR = "streamlit/hw-dm-crud-streamlit"
+SOURCE_DATASET_FILE = "data_sets/hw-dm-crud-streamlit-dataset.DataSet.yaml"
 
 MODULE_TOML_TEMPLATE = """[module]
-title = "Hello World NEAT ({suffix})"
+title = "Hello World CRUD Streamlit ({suffix})"
 
 [packages]
 tags = [
@@ -45,17 +51,17 @@ tags = [
 ]
 """
 
-DATASET_YAML = """externalId: hw-neat-dataset
-name: Hello World NEAT Dataset
-description: Dataset for Hello World NEAT data model demo
+DATASET_YAML = """externalId: hw-dm-crud-streamlit-dataset
+name: Hello World — CRUD Streamlit (NEAT data model)
+description: Template streamlit - Hello World Streamlit with CRUD operations to a basic NEAT data model
 """
 
-STREAMLIT_YAML_TEMPLATE = """externalId: hw-neat-{suffix}
-name: Hello World NEAT ({suffix})
+STREAMLIT_YAML_TEMPLATE = """externalId: hw-dm-crud-streamlit-{suffix}
+name: Hello World CRUD ({suffix})
 creator: {creator}
-description: "{version} - Hello World NEAT data management interface demo ({suffix})"
+description: "{version} - Hello World CRUD Streamlit data management interface ({suffix})"
 entrypoint: main.py
-dataSetExternalId: hw-neat-dataset
+dataSetExternalId: hw-dm-crud-streamlit-dataset
 """
 
 CONFIG_TEMPLATE = """environment:
@@ -64,14 +70,14 @@ CONFIG_TEMPLATE = """environment:
   validation-type: dev
   selected:
   ### ===========================================
-  ### HELLO WORLD NEAT DATA MODEL (shared)
+  ### HELLO WORLD CRUD STREAMLIT (shared base)
   ### ===========================================
-  - modules/hw-neat                          ### Hello World NEAT data model + default Streamlit app
+  - modules/hw-dm-crud-streamlit              ### Shared data model, dataset, and base Streamlit app
 
   ### ===========================================
-  ### PERSONAL HW-NEAT APP ({suffix})
+  ### PERSONAL CRUD APP ({suffix})
   ### ===========================================
-  - modules/hw-neat-{suffix}                  ### Hello World NEAT personal app ({suffix})
+  - modules/hw-dm-crud-streamlit-{suffix}      ### Personal CRUD Streamlit app ({suffix})
 
 variables:
   # Environment Configuration
@@ -125,7 +131,7 @@ variables:
 
 
 def get_creator(repo_root: Path, suffix: str) -> str:
-    """Use git user.email if set; otherwise the name (suffix) passed in."""
+    """Use git user.email if set; otherwise the suffix passed in."""
     try:
         out = subprocess.run(
             ["git", "config", "user.email"],
@@ -143,7 +149,10 @@ def get_creator(repo_root: Path, suffix: str) -> str:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Set up a personal hw-neat module and config (modules/hw-neat-<suffix>, config.hw-neat-<suffix>.yaml)."
+        description=(
+            "Set up a personal hw-dm-crud-streamlit module and config "
+            "(modules/hw-dm-crud-streamlit-<suffix>, config.hw-dm-crud-streamlit-<suffix>.yaml)."
+        )
     )
     parser.add_argument(
         "suffix",
@@ -161,23 +170,19 @@ def main():
         print("Error: suffix must be lowercase letters, numbers, or hyphens (e.g. jag, alice).")
         sys.exit(1)
 
-    if args.repo:
-        repo_root = Path(args.repo).resolve()
-    else:
-        repo_root = Path(__file__).resolve().parent.parent
+    repo_root = Path(args.repo).resolve() if args.repo else Path(__file__).resolve().parent.parent
 
     source_module_path = repo_root / SOURCE_MODULE
-    source_app_dir = source_module_path / "streamlit" / "hw-neat"
-    target_module_dir = repo_root / "modules" / f"hw-neat-{suffix}"
-    target_app_dir = target_module_dir / "streamlit" / f"hw-neat-{suffix}"
+    source_app_dir = source_module_path / "streamlit" / "hw-dm-crud-streamlit"
+    target_module_dir = repo_root / "modules" / f"hw-dm-crud-streamlit-{suffix}"
+    target_app_dir = target_module_dir / "streamlit" / f"hw-dm-crud-streamlit-{suffix}"
     target_dataset_dir = target_module_dir / "data_sets"
-    config_path = repo_root / f"config.hw-neat-{suffix}.yaml"
+    config_path = repo_root / f"config.hw-dm-crud-streamlit-{suffix}.yaml"
 
     creator = get_creator(repo_root, suffix)
 
-    # --- Verbose: paths ---
     print("=" * 60)
-    print("SETUP PERSONAL HW-NEAT MODULE (verbose)")
+    print("SETUP PERSONAL HW-DM-CRUD-STREAMLIT MODULE")
     print("=" * 60)
     print()
     print("Creator (for Streamlit YAML):")
@@ -188,11 +193,11 @@ def main():
         print(f"  (fallback: suffix '{suffix}', git user.email not set)")
     print()
     print("Paths:")
-    print(f"  Repo root:          {repo_root}")
-    print(f"  Source app:          {source_app_dir}")
-    print(f"  Target module:       {target_module_dir}")
-    print(f"  Target app:          {target_app_dir}")
-    print(f"  Config file:         {config_path}")
+    print(f"  Repo root:     {repo_root}")
+    print(f"  Source app:    {source_app_dir}")
+    print(f"  Target module: {target_module_dir}")
+    print(f"  Target app:    {target_app_dir}")
+    print(f"  Config file:   {config_path}")
     print()
 
     if not source_app_dir.is_dir():
@@ -206,23 +211,25 @@ def main():
         print(f"Error: Config already exists: {config_path}")
         sys.exit(1)
 
-    # --- 1. Create module dir and module.toml ---
-    print("Step 1: Create module and app structure")
+    # --- 1. Create module.toml ---
+    print("Step 1: Create module and dataset structure")
     print("-" * 40)
     target_module_dir.mkdir(parents=True, exist_ok=True)
     (target_module_dir / "module.toml").write_text(
         MODULE_TOML_TEMPLATE.format(suffix=suffix), encoding="utf-8"
     )
     print(f"  Created: {target_module_dir / 'module.toml'}")
+
     target_dataset_dir.mkdir(parents=True, exist_ok=True)
-    (target_module_dir / "data_sets" / "hw-neat-dataset.DataSet.yaml").write_text(DATASET_YAML, encoding="utf-8")
-    print(f"  Created: {target_module_dir / 'data_sets/hw-neat-dataset.DataSet.yaml'}")
-    target_app_dir.mkdir(parents=True, exist_ok=True)
+    dataset_file = target_dataset_dir / "hw-dm-crud-streamlit-dataset.DataSet.yaml"
+    dataset_file.write_text(DATASET_YAML, encoding="utf-8")
+    print(f"  Created: {dataset_file}")
     print()
 
-    # --- 2. Copy app files (main.py, data_modeling.py, requirements.txt) ---
+    # --- 2. Copy app files ---
     print("Step 2: Copy Streamlit app files")
     print("-" * 40)
+    target_app_dir.mkdir(parents=True, exist_ok=True)
     copied_files = []
     for p in sorted(source_app_dir.rglob("*")):
         if p.is_file():
@@ -238,17 +245,18 @@ def main():
     print("Step 3: Create Streamlit YAML")
     print("-" * 40)
     version = f"v{date.today():%Y.%m.%d}.v1"
-    streamlit_yaml = target_module_dir / "streamlit" / f"hw-neat-{suffix}.Streamlit.yaml"
-    yaml_content = STREAMLIT_YAML_TEMPLATE.format(suffix=suffix, creator=creator, version=version)
-    streamlit_yaml.write_text(yaml_content, encoding="utf-8")
+    streamlit_yaml = target_module_dir / "streamlit" / f"hw-dm-crud-streamlit-{suffix}.Streamlit.yaml"
+    streamlit_yaml.write_text(
+        STREAMLIT_YAML_TEMPLATE.format(suffix=suffix, creator=creator, version=version),
+        encoding="utf-8",
+    )
     print(f"  Written: {streamlit_yaml}")
     print()
 
     # --- 4. Write config ---
     print("Step 4: Create config file")
     print("-" * 40)
-    config_content = CONFIG_TEMPLATE.format(suffix=suffix)
-    config_path.write_text(config_content, encoding="utf-8")
+    config_path.write_text(CONFIG_TEMPLATE.format(suffix=suffix), encoding="utf-8")
     print(f"  Written: {config_path}")
     print()
 
@@ -258,8 +266,8 @@ def main():
     errors = []
     if not (target_module_dir / "module.toml").is_file():
         errors.append("module.toml missing")
-    if not (target_module_dir / "data_sets" / "hw-neat-dataset.DataSet.yaml").is_file():
-        errors.append("data_sets/hw-neat-dataset.DataSet.yaml missing")
+    if not dataset_file.is_file():
+        errors.append(f"{dataset_file.name} missing")
     if not streamlit_yaml.is_file():
         errors.append("Streamlit YAML missing")
     for rel in copied_files:
@@ -285,11 +293,14 @@ def main():
     print(f"  Config:  {config_path.resolve()}")
     print()
     print("Next steps:")
-    print(f"  cdf build --env hw-neat-{suffix}")
-    print(f"  cdf deploy --env hw-neat-{suffix} --dry-run")
-    print(f"  cdf deploy --env hw-neat-{suffix}")
+    print(f"  cdf build --env hw-dm-crud-streamlit-{suffix}")
+    print(f"  cdf deploy --env hw-dm-crud-streamlit-{suffix} --dry-run")
+    print(f"  cdf deploy --env hw-dm-crud-streamlit-{suffix}")
     print()
-    print(f"In CDF you will see the default 'Hello World NEAT' and your 'Hello World NEAT ({suffix})'.")
+    print(
+        f"In CDF you will see the base 'Hello World NEAT' and your "
+        f"'Hello World CRUD ({suffix})' apps."
+    )
     return 0
 
 

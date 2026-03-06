@@ -29,13 +29,19 @@ def _load_dotenv():
     """Load .env from repo root and cwd using python-dotenv."""
     _script_dir = os.path.abspath(os.path.dirname(os.path.abspath(__file__)))
     repo_root = os.path.dirname(_script_dir)
+    print("Loading environment variables:")
     for name in (".env", ".env.local"):
         path = os.path.join(repo_root, name)
         if os.path.isfile(path):
             load_dotenv(path, override=False)
+            print(f"  ✓ {path}")
+        else:
+            print(f"  - {path}  (not found, skipped)")
     cwd_env = os.path.join(os.getcwd(), ".env")
-    if os.path.isfile(cwd_env):
+    if cwd_env != os.path.join(repo_root, ".env") and os.path.isfile(cwd_env):
         load_dotenv(cwd_env, override=True)
+        print(f"  ✓ {cwd_env}  (cwd override)")
+    print()
 
 
 _load_dotenv()
@@ -127,17 +133,39 @@ def main():
     client_id = os.getenv("IDP_CLIENT_ID")
     client_secret = os.getenv("IDP_CLIENT_SECRET")
     token_url = os.getenv("IDP_TOKEN_URL")
+    scopes_raw = os.getenv("IDP_SCOPES", "")
+
+    def _show(label: str, value: str | None, secret: bool = False) -> None:
+        if value:
+            display = f"{'*' * 6}{value[-4:]}" if secret else value
+            print(f"  ✓ {label}: {display}")
+        else:
+            print(f"  ✗ {label}: NOT SET")
+
+    print("CDF configuration:")
+    _show("CDF_URL", cdf_url)
+    _show("CDF_PROJECT", cdf_project)
+    _show("IDP_CLIENT_ID", client_id)
+    _show("IDP_CLIENT_SECRET", client_secret, secret=True)
+    _show("IDP_TOKEN_URL", token_url)
+    _show("IDP_SCOPES", scopes_raw or None)
+    print()
+
     if not all([cdf_url, cdf_project, client_id, client_secret, token_url]):
-        print("Missing CDF credentials.")
-        print("  Use a .env file in the repo root (or cwd) with CDF_PROJECT, CDF_URL, IDP_CLIENT_ID, IDP_CLIENT_SECRET, IDP_TOKEN_URL")
-        print("  Or set them in the shell (e.g. cdfenv <env>). Install python-dotenv to load .env automatically.")
+        print("ERROR: One or more required variables are missing.")
+        print("  Add them to a .env file in the repo root (CDF_PROJECT, CDF_URL, IDP_CLIENT_ID, IDP_CLIENT_SECRET, IDP_TOKEN_URL).")
         sys.exit(1)
+
+    # IDP_SCOPES may be a space-separated list (e.g. "https://az-eastus-1.cognitedata.com/.default")
+    # Fall back to <CDF_URL>/.default if not set.
+    scopes = scopes_raw.split() if scopes_raw.strip() else [f"{cdf_url}/.default"]
+    print(f"Using scopes: {scopes}")
 
     credentials = OAuthClientCredentials(
         token_url=token_url,
         client_id=client_id,
         client_secret=client_secret,
-        scopes=[f"{cdf_url}/.default"],
+        scopes=scopes,
     )
     config = ClientConfig(
         client_name="edr-populate-timeseries",

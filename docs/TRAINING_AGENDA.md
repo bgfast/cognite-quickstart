@@ -62,21 +62,21 @@ Reference modules: `hw-neat` (NEAT + Streamlit), `hw-timeseries-streamlit` (time
 
 ## One app per person (many trainees)
 
-When many people (e.g. 20) each clone the repo and deploy the **hw-neat** Streamlit app, they would all deploy to the same app in CDF (`externalId: hw-neat`) and overwrite each other. To give each person their own app in CDF (e.g. `hw-neat-jag`, `hw-neat-alice`):
+When many people (e.g. 20) each clone the repo and deploy the **hw-dm-crud-streamlit** app, they would all deploy to the same app in CDF (`externalId: hw-dm-crud-streamlit`) and overwrite each other. To give each person their own app in CDF (e.g. `hw-dm-crud-streamlit-jag`, `hw-dm-crud-streamlit-alice`):
 
 **Per person (once):** From repo root, run with a **unique suffix** (e.g. first name or `user-01` … `user-20`):
 
 ```bash
-python scripts/setup_personal_hw_neat_app.py <suffix>
+python scripts/setup_personal_hw_crud_app.py <suffix>
 ```
 
-**What the script does:** Creates a new **module** `modules/hw-neat-<suffix>/` (with module.toml, data_sets, and Streamlit app copied from the default) and a **config** `config.hw-neat-<suffix>.yaml` that selects both `modules/hw-neat` and `modules/hw-neat-<suffix>`. The default app in `modules/hw-neat` is not modified.
+**What the script does:** Creates a new **module** `modules/hw-dm-crud-streamlit-<suffix>/` (with module.toml, data_sets, and Streamlit app copied from the base) and a **config** `config.hw-dm-crud-streamlit-<suffix>.yaml` that selects both `modules/hw-dm-crud-streamlit` (shared base) and `modules/hw-dm-crud-streamlit-<suffix>` (personal app). The base module is not modified.
 
 **Suffix rules:** Lowercase letters, numbers, or hyphens (e.g. `jag`, `alice`, `user-01`). Each person must use a different suffix.
 
-**After running:** Build and deploy with the new config: `cdf build --env hw-neat-<suffix>`, `cdf deploy --env hw-neat-<suffix>`. In CDF, **use “Hello World NEAT (&lt;suffix&gt;)”** so you don’t overwrite others’ work on the shared default.
+**After running:** Build and deploy with the new config: `cdf build --env hw-dm-crud-streamlit-<suffix>`, `cdf deploy --env hw-dm-crud-streamlit-<suffix>`. In CDF, **use “Hello World CRUD (&lt;suffix&gt;)”** so you don’t overwrite others’ work on the shared default.
 
-**Instructors:** Before the session, have everyone pick (or assign) a unique suffix. To switch suffix later, remove `modules/hw-neat-<old>/` and `config.hw-neat-<old>.yaml`, then run the script again with the new suffix.
+**Instructors:** Before the session, have everyone pick (or assign) a unique suffix. To switch suffix later, remove `modules/hw-dm-crud-streamlit-<old>/` and `config.hw-dm-crud-streamlit-<old>.yaml`, then run the script again with the new suffix.
 
 ---
 
